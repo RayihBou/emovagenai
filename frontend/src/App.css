@@ -289,6 +289,19 @@ section h2 {
   font-size: 0.85rem;
 }
 
+.footer-powered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.logo-aws-footer {
+  height: 20px;
+}
+
 .footer .services {
   margin-top: 0.5rem;
   font-size: 0.75rem;

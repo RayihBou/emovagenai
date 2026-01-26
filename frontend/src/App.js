@@ -3,6 +3,7 @@ import './App.css';
 
 const LOGO_EMOVA = 'https://emova.com.ar/wp-content/uploads/2023/09/aplicacion-ppal-logotag-concesionario-digital-footer-web.png';
 const LOGO_GOBIERNO = 'https://www.argentina.gob.ar/profiles/argentinagobar/themes/argentinagobar/argentinagobar_theme/logo_argentina-azul.svg';
+const LOGO_AWS = 'https://a0.awsstatic.com/libra-css/images/logos/aws_smile-header-desktop-en-white_59x35.png';
 
 function App() {
   const [file, setFile] = useState(null);
@@ -178,7 +179,10 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>Powered by Amazon Web Services</p>
+        <div className="footer-powered">
+          <span>Powered by</span>
+          <img src={LOGO_AWS} alt="AWS" className="logo-aws-footer" />
+        </div>
         <p className="services">Amazon Transcribe | Amazon Bedrock | Claude 3.5 Sonnet</p>
       </footer>
     </div>
