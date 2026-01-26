@@ -75,27 +75,46 @@ section h2 {
 }
 
 .upload-box {
+  margin-bottom: 1.5rem;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: rgba(124, 58, 237, 0.05);
+}
+
+.upload-box:hover {
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.upload-box.has-file {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.upload-icon {
+  font-size: 3rem;
   margin-bottom: 1rem;
+}
+
+.upload-box p {
+  color: #e2e8f0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.upload-hint {
+  color: #64748b;
+  font-size: 0.85rem;
+  display: block;
 }
 
 .upload-box input {
   display: none;
-}
-
-.upload-label {
-  display: block;
-  padding: 2rem;
-  border: 2px dashed rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  text-align: center;
-  cursor: pointer;
-  color: #94a3b8;
-  transition: all 0.3s;
-}
-
-.upload-label:hover {
-  border-color: #7c3aed;
-  background: rgba(124, 58, 237, 0.1);
 }
 
 .analyze-btn {

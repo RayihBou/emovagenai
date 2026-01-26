@@ -93,17 +93,19 @@ function App() {
 
       <main className="main">
         <section className="upload-section">
-          <div className="upload-box" onClick={() => fileInputRef.current?.click()}>
+          <div 
+            className={`upload-box ${file ? 'has-file' : ''}`} 
+            onClick={() => fileInputRef.current?.click()}
+          >
             <input
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
               accept="audio/*"
-              style={{ display: 'none' }}
             />
-            <div className="upload-icon">🎙️</div>
-            <p>{file ? file.name : 'Seleccionar archivo de audio'}</p>
-            <span className="upload-hint">MP3, WAV, M4A</span>
+            <div className="upload-icon">{file ? '✓' : '🎙️'}</div>
+            <p>{file ? file.name : 'Haz clic o arrastra un archivo de audio'}</p>
+            <span className="upload-hint">{file ? 'Clic para cambiar archivo' : 'Formatos: MP3, WAV, M4A, OGG'}</span>
           </div>
           
           <button 
