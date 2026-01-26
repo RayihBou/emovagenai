@@ -192,108 +192,191 @@ section h2 {
   margin-bottom: 1.5rem;
 }
 
-.score-circle {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  border: 6px solid;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.score-value {
-  font-size: 2.5rem;
-  font-weight: 700;
-}
-
-.score-label {
-  font-size: 1rem;
-  color: #94a3b8;
-}
-
-.scores-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+/* Score Principal Card */
+.score-main-card {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(0, 212, 255, 0.1));
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
   margin-bottom: 1.5rem;
 }
 
-.score-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.score-circle {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 1rem;
+  position: relative;
 }
 
-.score-name {
-  width: 80px;
-  font-size: 0.85rem;
+.score-circle svg {
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+}
+
+.score-circle .score-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 8;
+}
+
+.score-circle .score-progress {
+  fill: none;
+  stroke: var(--score-color);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.8s ease;
+}
+
+.score-circle .score-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.score-circle .score-value {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.score-circle .score-max {
+  font-size: 1.2rem;
+  color: #64748b;
+}
+
+.score-title {
+  font-size: 1.1rem;
+  color: #94a3b8;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Criterios Card */
+.criteria-card {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.criteria-card h3 {
+  font-size: 1rem;
+  color: #e2e8f0;
+  margin-bottom: 1.25rem;
+}
+
+.criteria-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.criteria-item {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.criteria-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.criteria-name {
+  font-size: 0.9rem;
   color: #94a3b8;
 }
 
-.score-bar {
-  flex: 1;
-  height: 8px;
+.criteria-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.criteria-bar {
+  height: 6px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
 }
 
-.score-fill {
+.criteria-fill {
   height: 100%;
-  border-radius: 4px;
-  transition: width 0.5s ease;
+  border-radius: 3px;
+  transition: width 0.6s ease;
 }
 
-.score-num {
-  width: 24px;
-  text-align: right;
-  font-weight: 600;
+/* Cards generales */
+.card {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
 }
 
-.justification, .errors, .recommendations {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-}
-
-.justification h3, .errors h3, .recommendations h3 {
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
+.card h3 {
+  font-size: 0.95rem;
   color: #e2e8f0;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.justification p {
+.card p {
   font-size: 0.9rem;
   color: #94a3b8;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
-.errors ul, .recommendations ul {
+.card ul {
   list-style: none;
-  padding-left: 0;
+  padding: 0;
+  margin: 0;
 }
 
-.errors li {
+.card li {
   font-size: 0.85rem;
+  padding: 0.4rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.errors-card li {
   color: #f87171;
-  padding: 0.25rem 0;
 }
 
-.errors li::before {
-  content: "✗ ";
+.errors-card li::before {
+  content: "✗";
+  position: absolute;
+  left: 0;
 }
 
-.recommendations li {
-  font-size: 0.85rem;
+.recommendations-card li {
   color: #4ade80;
-  padding: 0.25rem 0;
 }
 
-.recommendations li::before {
-  content: "→ ";
+.recommendations-card li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+}
+
+/* Feedback Grid */
+.feedback-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.feedback-grid .card {
+  margin-bottom: 0;
 }
 
 .footer {
@@ -333,7 +416,11 @@ section h2 {
     gap: 1rem;
   }
   
-  .scores-grid {
+  .criteria-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .feedback-grid {
     grid-template-columns: 1fr;
   }
   

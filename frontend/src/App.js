@@ -122,75 +122,83 @@ function App() {
 
         {result && (
           <section className="results-section">
-            <div className="score-card">
-              <div className="score-main" style={{ borderColor: getScoreColor(result.score) }}>
-                <span className="score-value" style={{ color: getScoreColor(result.score) }}>
-                  {result.score?.toFixed(1)}
-                </span>
-                <span className="score-label">Puntuación General</span>
+            {/* Score Principal */}
+            <div className="score-main-card">
+              <div className="score-circle" style={{ '--score-color': getScoreColor(result.score), '--score-percent': `${result.score * 10}%` }}>
+                <svg viewBox="0 0 100 100">
+                  <circle className="score-bg" cx="50" cy="50" r="45" />
+                  <circle className="score-progress" cx="50" cy="50" r="45" 
+                    style={{ strokeDasharray: `${result.score * 28.27} 282.7` }} />
+                </svg>
+                <div className="score-text">
+                  <span className="score-value">{result.score?.toFixed(1)}</span>
+                  <span className="score-max">/10</span>
+                </div>
               </div>
-              
-              <div className="score-details">
-                <div className="score-item">
-                  <span className="score-name">Fraseología</span>
-                  <span className="score-num" style={{ color: getScoreColor(result.fraseologia) }}>
-                    {result.fraseologia}
-                  </span>
-                </div>
-                <div className="score-item">
-                  <span className="score-name">Claridad</span>
-                  <span className="score-num" style={{ color: getScoreColor(result.claridad) }}>
-                    {result.claridad}
-                  </span>
-                </div>
-                <div className="score-item">
-                  <span className="score-name">Protocolo</span>
-                  <span className="score-num" style={{ color: getScoreColor(result.protocolo) }}>
-                    {result.protocolo}
-                  </span>
-                </div>
-                <div className="score-item">
-                  <span className="score-name">Formalidad</span>
-                  <span className="score-num" style={{ color: getScoreColor(result.formalidad) }}>
-                    {result.formalidad}
-                  </span>
-                </div>
+              <h2 className="score-title">Puntuación General</h2>
+            </div>
+
+            {/* Criterios con barras */}
+            <div className="criteria-card">
+              <h3>Criterios de Evaluación</h3>
+              <div className="criteria-grid">
+                {[
+                  { name: 'Fraseología', value: result.fraseologia },
+                  { name: 'Claridad', value: result.claridad },
+                  { name: 'Protocolo', value: result.protocolo },
+                  { name: 'Formalidad', value: result.formalidad }
+                ].map((c, i) => (
+                  <div className="criteria-item" key={i}>
+                    <div className="criteria-header">
+                      <span className="criteria-name">{c.name}</span>
+                      <span className="criteria-value" style={{ color: getScoreColor(c.value) }}>{c.value}</span>
+                    </div>
+                    <div className="criteria-bar">
+                      <div className="criteria-fill" style={{ width: `${c.value * 10}%`, background: getScoreColor(c.value) }} />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
+            {/* Transcripción */}
             {result.transcript && (
-              <div className="transcript-card">
+              <div className="card transcript-card">
                 <h3>Transcripción</h3>
                 <p>{result.transcript}</p>
               </div>
             )}
 
-            <div className="analysis-card">
+            {/* Justificación */}
+            <div className="card justification-card">
               <h3>Justificación</h3>
               <p>{result.justification}</p>
             </div>
 
-            {result.errores_detectados?.length > 0 && (
-              <div className="errors-card">
-                <h3>Errores Detectados</h3>
-                <ul>
-                  {result.errores_detectados.map((err, i) => (
-                    <li key={i}>{err}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {/* Errores y Recomendaciones lado a lado */}
+            <div className="feedback-grid">
+              {result.errores_detectados?.length > 0 && (
+                <div className="card errors-card">
+                  <h3>Errores Detectados</h3>
+                  <ul>
+                    {result.errores_detectados.map((err, i) => (
+                      <li key={i}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-            {result.recommendations?.length > 0 && (
-              <div className="recommendations-card">
-                <h3>Recomendaciones</h3>
-                <ul>
-                  {result.recommendations.map((rec, i) => (
-                    <li key={i}>{rec}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+              {result.recommendations?.length > 0 && (
+                <div className="card recommendations-card">
+                  <h3>Recomendaciones</h3>
+                  <ul>
+                    {result.recommendations.map((rec, i) => (
+                      <li key={i}>{rec}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </section>
         )}
       </main>
