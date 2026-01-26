@@ -6,6 +6,11 @@
 - **Remote:** https://github.com/RayihBou/emovagenai.git
 - **Local:** /Users/rayihbou/Documents/APU/Clientes/Emova Movilidad SA/PoC Analítica Conversaciones
 
+## Frontend (Amplify)
+- **App ID:** d1qfd0b1qv6z20
+- **URL:** https://main.d1qfd0b1qv6z20.amplifyapp.com/
+- **CI/CD:** Conectado a GitHub, deploy automático en cada push a main
+
 ---
 
 ## Requisitos Críticos de Implementación
