@@ -80,6 +80,55 @@ function App() {
     return '#ef4444';
   };
 
+  const downloadResult = (format) => {
+    if (!result) return;
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+    const filename = `emova_analisis_${timestamp}`;
+    
+    let content, type, ext;
+    if (format === 'json') {
+      content = JSON.stringify({ archivo: file?.name, fecha: new Date().toISOString(), ...result }, null, 2);
+      type = 'application/json';
+      ext = 'json';
+    } else {
+      content = `ANÁLISIS DE COMUNICACIÓN - EMOVA
+================================
+Archivo: ${file?.name}
+Fecha: ${new Date().toLocaleString()}
+
+PUNTUACIÓN GENERAL: ${result.score}/10
+
+CRITERIOS:
+- Fraseología: ${result.fraseologia}/10
+- Claridad: ${result.claridad}/10
+- Protocolo: ${result.protocolo}/10
+- Formalidad: ${result.formalidad}/10
+
+TRANSCRIPCIÓN:
+${result.transcript}
+
+JUSTIFICACIÓN:
+${result.justification}
+
+ERRORES DETECTADOS:
+${result.errores_detectados?.map(e => `- ${e}`).join('\n') || 'Ninguno'}
+
+RECOMENDACIONES:
+${result.recommendations?.map(r => `- ${r}`).join('\n') || 'Ninguna'}
+`;
+      type = 'text/plain';
+      ext = 'txt';
+    }
+    
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="app">
       <header className="header">
@@ -124,6 +173,14 @@ function App() {
           <section className="results-section">
             {/* Score Principal */}
             <div className="score-main-card">
+              <div className="download-buttons">
+                <button className="download-btn" onClick={() => downloadResult('json')}>
+                  Descargar JSON
+                </button>
+                <button className="download-btn" onClick={() => downloadResult('txt')}>
+                  Descargar TXT
+                </button>
+              </div>
               <div className="score-circle" style={{ '--score-color': getScoreColor(result.score), '--score-percent': `${result.score * 10}%` }}>
                 <svg viewBox="0 0 100 100">
                   <circle className="score-bg" cx="50" cy="50" r="45" />
