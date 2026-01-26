@@ -1,288 +1,115 @@
-# Memory: Demo Analítica de Conversaciones - Emova Movilidad SA
+# Emova - Analítica de Conversaciones
 
-## Fecha Demo: 29 de enero de 2026
+## Contexto del Proyecto
+
+Demo para Emova Movilidad SA (operador del metro de Buenos Aires) para evaluar la calidad de comunicaciones operativas entre operadores usando servicios AWS.
+
+**Fecha de presentación:** 29 de enero de 2026
+**Cliente:** Emova Movilidad SA
+**Contacto:** Brian Domecq
+
+## Estado Actual: DEMO FUNCIONAL
+
+### URL de la Demo
+https://main.d1qfd0b1qv6z20.amplifyapp.com/
+
+### Flujo Implementado
+1. Usuario sube archivo de audio
+2. Audio se almacena en S3 (URL presignada)
+3. Lambda invoca Amazon Transcribe (es-ES)
+4. Transcripción se evalúa con Claude 3.5 Sonnet v2
+5. Resultados se muestran con visualización gráfica
+6. Usuario puede descargar resultados en JSON o TXT
+
+## Recursos AWS Desplegados
+
+| Recurso | Identificador | Región |
+|---------|---------------|--------|
+| API Gateway | h7llsoo392 | us-east-1 |
+| Lambda Analyze | emova-analyze-dev | us-east-1 |
+| Lambda Upload | emova-upload-url-dev | us-east-1 |
+| S3 Bucket | emova-audio-302263078976-dev | us-east-1 |
+| Amplify App | d1qfd0b1qv6z20 | us-east-1 |
+| CloudFormation Stack | emova-analytics | us-east-1 |
+
+**Tag en todos los recursos:** `Project: EMOVA`
+
+## Endpoints
+
+- **API Base:** https://h7llsoo392.execute-api.us-east-1.amazonaws.com/dev
+- **Upload URL:** GET /upload-url?filename={nombre}
+- **Analyze:** POST /analyze (body: {audio_key: "input/archivo.mp3"})
+
+## Modelo de IA
+
+**Claude 3.5 Sonnet v2** - `us.anthropic.claude-3-5-sonnet-20241022-v2:0`
+
+## Criterios de Evaluación
+
+Basados en UIC 751-3 y ALAF (25% cada uno):
+1. **Fraseología** - Términos oficiales
+2. **Claridad** - Mensaje sin ambigüedades
+3. **Protocolo** - Identificación y estructura
+4. **Formalidad** - Lenguaje profesional
 
 ## Repositorio
-- **Remote:** https://github.com/RayihBou/emovagenai.git
-- **Local:** /Users/rayihbou/Documents/APU/Clientes/Emova Movilidad SA/PoC Analítica Conversaciones
 
-## Frontend (Amplify)
-- **App ID:** d1qfd0b1qv6z20
-- **URL:** https://main.d1qfd0b1qv6z20.amplifyapp.com/
-- **CI/CD:** Conectado a GitHub, deploy automático en cada push a main
+- **GitHub:** https://github.com/RayihBou/emovagenai
+- **Branch:** main
+- **Visibilidad:** Público
 
----
+## Archivos Clave
 
-## Requisitos Críticos de Implementación
+| Archivo | Descripción |
+|---------|-------------|
+| `src/analyze_handler.py` | Lambda principal (Transcribe + Bedrock) |
+| `src/upload_handler.py` | Lambda para URLs presignadas |
+| `frontend/src/App.js` | Componente React principal |
+| `frontend/src/App.css` | Estilos del frontend |
+| `template.yaml` | SAM template |
+| `config/prompts/evaluation_prompt.txt` | Prompt de evaluación |
 
-### Control de Modificaciones
-- Operaciones de lectura/análisis: Ejecutar sin preguntar
-- Creación/modificación de archivos: SIEMPRE pedir confirmación antes de ejecutar
+## Historial de Cambios
 
-### Estructura de Proyecto
-**OBLIGATORIO:** Mantener orden estricto en la estructura del proyecto:
-- Raíz del proyecto debe estar lo más limpia posible
-- Cada archivo debe estar en la carpeta que le corresponde
-- Usar convenciones estándar: `src/`, `tests/`, `docs/`, `config/`, etc.
-- No mezclar tipos de archivos en la misma carpeta
+### 2026-01-26
+- Desplegado backend completo con SAM (API Gateway + Lambdas)
+- Configurado CORS en S3 para uploads desde frontend
+- Corregido modelo Bedrock para usar inference profile
+- Rediseñada visualización de resultados (score circular, barras de progreso)
+- Agregados botones de descarga JSON/TXT
+- Mejorada área de upload de audio
+- Agregado favicon y logo AWS en footer
+- Corregido fondo blanco en overscroll
+- Limpieza de archivos obsoletos
 
-### Gestión de Tareas (TODO)
-**OBLIGATORIO:** Usar TODO list para todas las tareas multi-paso:
-- Crear TODO antes de iniciar cualquier desarrollo
-- Marcar tareas completadas conforme se avanza
-- Actualizar memory.md con tareas realizadas y pendientes
-- Mantiene orden de ejecución y sirve como historial del proyecto
+### Anteriores
+- Estructura inicial del proyecto
+- Frontend React desplegado en Amplify
+- Investigación de estándares UIC 751-3 y ALAF
+- Prompt de evaluación optimizado
 
-### Tagging Obligatorio
-**IMPORTANTE:** Todos los recursos AWS desplegados para este proyecto DEBEN incluir el tag:
-- **Key:** `Project`
-- **Value:** `EMOVA`
+## Pendientes
 
-Esto aplica a: S3 buckets, Lambda functions, Step Functions, DynamoDB tables, IAM roles, y cualquier otro recurso creado.
+- [ ] Obtener audios reales del cliente (solicitados a Brian Domecq)
+- [ ] Crear guía de demo (docs/demo-guide.md)
+- [ ] Pruebas con audios de comunicaciones ferroviarias reales
 
----
+## Comandos Útiles
 
-## Contexto del Cliente
+```bash
+# Desplegar backend
+sam build && sam deploy --stack-name emova-analytics --region us-east-1 --capabilities CAPABILITY_IAM --resolve-s3 --tags Project=EMOVA
 
-- **Empresa:** Emova Movilidad SA - Concesionaria del sistema de subterráneos de Buenos Aires
-- **Operación:** 6 líneas de subte + premetro (red de transporte más importante de Argentina)
-- **Cliente AWS desde:** 2023
-- **Experiencia previa:** EC2, S3, Bedrock (proyectos de procesamiento de imágenes/video para Censo)
-- **Contacto principal:** Brian Domecq (Infrastructure Project Lead)
-- **Equipo AWS:** Pablo García (DG), Ivan Gazabon (CSR), Rayih Bou (SA)
+# Ver logs de Lambda
+aws logs tail /aws/lambda/emova-analyze-dev --follow
 
----
-
-## Problema a Resolver
-
-Desarrollar un modelo de IA para evaluar la calidad de las comunicaciones de audio entre actores operativos del metro:
-- Conductores
-- PCO (Puesto Central de Operaciones)
-- Mantenimiento
-- Señales
-
-### Inputs
-- Grabaciones de audio de comunicaciones operativas
-- Manual de comunicación de la Universidad de La Plata (estándar de referencia)
-
-### Outputs Esperados
-- Modelo autónomo de evaluación
-- Sistema de scoring (0-10)
-- Reportes con recomendaciones de mejora
-- Sistema de mejora continua
-
-### Criterios de Evaluación
-- Uso de fraseología oficial ferroviaria ("Afirmativo", "Copiado", etc.)
-- Cumplimiento de protocolos ferroviarios
-- Claridad de los mensajes
-- Formalidad en la comunicación
-- Detección de mensajes ambiguos, errores y malentendidos
-
----
-
-## Arquitectura Propuesta para la Demo
-
-```
-┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌─────────────┐    ┌───────────┐
-│   Audio     │───▶│   Amazon     │───▶│   Amazon    │───▶│   Amazon    │───▶│  Scoring  │
-│   (S3)      │    │  Transcribe  │    │  Comprehend │    │   Bedrock   │    │ Dashboard │
-└─────────────┘    └──────────────┘    └─────────────┘    └─────────────┘    └───────────┘
-                         │                    │                  │
-                         ▼                    ▼                  ▼
-                   Transcripción        Sentimiento         Evaluación
-                   + Diarización        + Entidades         vs Manual
+# Disparar build en Amplify
+aws amplify start-job --app-id d1qfd0b1qv6z20 --branch-name main --job-type RELEASE --region us-east-1
 ```
 
-### Servicios AWS Clave
+## Notas Técnicas
 
-| Servicio | Función | Tag Requerido |
-|----------|---------|---------------|
-| Amazon S3 | Almacenamiento de audios y manual | Project: EMOVA |
-| Amazon Transcribe | Transcripción de audio | Project: EMOVA |
-| Amazon Comprehend | Análisis de sentimiento y entidades | Project: EMOVA |
-| Amazon Bedrock | Evaluación inteligente contra manual | Project: EMOVA |
-| AWS Lambda | Orquestación de procesamiento | Project: EMOVA |
-| AWS Step Functions | Workflow de análisis | Project: EMOVA |
-| Amazon DynamoDB | Almacenamiento de resultados | Project: EMOVA |
-| IAM Roles | Permisos de ejecución | Project: EMOVA |
-
----
-
-## Estrategia de Demo (29 enero)
-
-### Objetivo
-Demostrar un flujo end-to-end funcional que procese un audio de ejemplo y genere un scoring con justificación.
-
-### Componentes Mínimos Viables
-
-1. **Transcripción en vivo**
-   - Subir audio de ejemplo a S3
-   - Transcribir con Transcribe (mostrar diarización de speakers)
-   
-2. **Análisis con Bedrock**
-   - Prompt engineering para evaluar transcripción vs criterios del manual
-   - Generar scoring 0-10 con justificación detallada
-   
-3. **Visualización simple**
-   - Output en formato estructurado (JSON)
-   - Opcional: Dashboard básico en Streamlit/Gradio
-
-### Diferenciadores vs Whisper (solución actual)
-
-| Aspecto | Whisper (actual) | AWS (propuesto) |
-|---------|------------------|-----------------|
-| Escalabilidad | Manual | Automática (serverless) |
-| Diarización | Limitada | Nativa en Transcribe |
-| Análisis semántico | No incluido | Comprehend + Bedrock |
-| Integración | Standalone | Ecosistema AWS completo |
-| Mantenimiento | Cliente | AWS managed |
-| Costo | Infraestructura fija | Pay-per-use |
-
----
-
-## MCP Servers para el Proyecto
-
-### Ya Configurados
-- **aws-knowledge-mcp-server:** Conocimiento interno AWS
-- **awslabs.aws-documentation-mcp-server:** Documentación técnica
-- **awslabs.git-repo-research-mcp-server:** Búsqueda semántica (FAISS + Bedrock)
-
-### Configuración de Agentes Kiro
-- **Ruta de configuración:** `/Users/rayihbou/.kiro`
-- **Agentes:** `/Users/rayihbou/.kiro/agents/`
-- **Prompts globales:** `/Users/rayihbou/.kiro/prompts/`
-
-Para activar un MCP server, agregar la configuración en el archivo JSON del agente correspondiente.
-
-### Recomendados para Activar
-
-#### Críticos para el Flujo Principal
-| Server | Función | Instalación |
-|--------|---------|-------------|
-| Bedrock Data Automation | Analiza documentos, imágenes, videos y audio | `uvx awslabs.aws-bedrock-data-automation-mcp-server@latest` |
-| Document Loader | Parseo y extracción de contenido (manual) | `uvx awslabs.document-loader-mcp-server@latest` |
-| Bedrock KB Retrieval | RAG con Knowledge Bases | `uvx awslabs.bedrock-kb-retrieval-mcp-server@latest` |
-| Step Functions | Orquestación del workflow | `uvx awslabs.stepfunctions-tool-mcp-server@latest` |
-
-#### Infraestructura y Desarrollo
-| Server | Función | Instalación |
-|--------|---------|-------------|
-| AWS Serverless | Lifecycle completo con SAM CLI | `uvx awslabs.aws-serverless-mcp-server@latest` |
-| DynamoDB | Operaciones y gestión de tablas | `uvx awslabs.dynamodb-mcp-server@latest` |
-| Lambda Tool | Ejecutar Lambdas como herramientas | `uvx awslabs.lambda-tool-mcp-server@latest` |
-| AWS CDK | Desarrollo IaC con compliance | `uvx awslabs.cdk-mcp-server@latest` |
-
-#### Útiles Adicionales
-| Server | Función | Instalación |
-|--------|---------|-------------|
-| AWS Diagram | Generar diagramas de arquitectura | `uvx awslabs.aws-diagram-mcp-server@latest` |
-| AWS IAM | Gestión de roles y políticas | `uvx awslabs.iam-mcp-server@latest` |
-
-### Nota sobre Transcribe y Comprehend
-No existen MCP servers específicos. Usar AWS API MCP Server para llamadas CLI directas o Bedrock Data Automation para procesamiento de audio.
-
----
-
-## Ideas para Demo Ganadora
-
-### 1. Demo Interactiva con Audio Real
-- Solicitar a Brian un audio de ejemplo (anonimizado)
-- Procesar en vivo durante la reunión
-- Mostrar transcripción con identificación de speakers
-
-### 2. Prompt Engineering Especializado
-```
-Evalúa la siguiente transcripción de comunicación ferroviaria según estos criterios:
-1. Uso de fraseología oficial (Afirmativo, Copiado, Recibido)
-2. Claridad del mensaje
-3. Cumplimiento de protocolo de identificación
-4. Formalidad apropiada
-
-Transcripción: {transcripcion}
-
-Genera un scoring de 0-10 y justifica cada punto.
-```
-
-### 3. Comparativa Visual
-- Mostrar lado a lado: transcripción Whisper vs Transcribe
-- Destacar mejoras en diarización y precisión
-
-### 4. Roadmap de Implementación
-- Fase 1: PoC (4 semanas) - Flujo básico funcional
-- Fase 2: MVP (8 semanas) - Dashboard + integración
-- Fase 3: Producción (12 semanas) - Escalabilidad + mejora continua
-
-### 5. Quick Wins
-- Mostrar Contact Lens for Amazon Connect como referencia de analítica de conversaciones
-- Demostrar capacidades de Bedrock con el manual indexado (RAG)
-
----
-
-## Riesgos y Mitigaciones
-
-| Riesgo | Mitigación |
-|--------|------------|
-| Audio de baja calidad | Transcribe tiene noise reduction |
-| Jerga ferroviaria específica | Custom vocabulary en Transcribe |
-| Manual extenso | Chunking + embeddings para RAG |
-| Latencia en procesamiento | Arquitectura asíncrona con Step Functions |
-
----
-
-## Próximos Pasos
-
-1. [x] Preparar estructura del proyecto
-2. [x] Crear README con contexto completo
-3. [x] Configurar template SAM
-4. [x] Desarrollar Lambda de transcripción
-5. [x] Desarrollar Lambda de análisis
-6. [x] Configurar bucket S3 para audios de prueba
-7. [ ] Probar flujo end-to-end (pendiente audios del cliente)
-8. [ ] Documentar instrucciones de demo
-
-## Pendientes con Cliente
-
-**26/01/2026** - Correo enviado a Brian Domecq solicitando archivos de audio de ejemplo para la demo.
-- Asunto: "Re: [EXTERNAL] Proyecto analítica de conversaciones"
-- Estado: Esperando respuesta
-
----
-
-## Metodología de Evaluación
-
-### Investigación Realizada
-Se investigaron estándares internacionales de comunicaciones ferroviarias:
-- **UIC 751-3**: Sistemas de comunicación ferroviaria internacional
-- **ALAF**: Normativas latinoamericanas adaptadas para contexto regional
-- **Manual Universidad de La Plata**: Referencia específica del cliente
-
-### Criterios de Scoring (0-10)
-
-| Criterio | Peso | Qué evalúa |
-|----------|------|------------|
-| Fraseología | 25% | Términos oficiales: "Afirmativo", "Copiado", "Solicito", "Confirme", "Repita" |
-| Claridad | 25% | Mensaje completo, ubicación exacta, sin ambigüedades |
-| Protocolo | 25% | Estructura: Identificación emisor → receptor → mensaje → confirmación |
-| Formalidad | 25% | Lenguaje profesional, sin apodos ni coloquialismos |
-
-### Errores Comunes Detectados (del análisis del cliente)
-- Uso de apodos: "Pecho", "Claudito", "amigo", "flaco"
-- Repetición innecesaria: "copiado, copiado, copiado"
-- Expresiones coloquiales: "dale", "le pego un vistazo", "bueno bueno"
-- Falta de identificación formal de emisor/receptor
-- Mensajes incompletos sin ubicación exacta
-
-### Escala de Puntaje
-- **9-10**: Excelente - Comunicación modelo
-- **7-8**: Muy bueno - Mínimas desviaciones
-- **5-6**: Aceptable - Algunas falencias
-- **3-4**: Deficiente - Múltiples errores
-- **1-2**: Muy deficiente - No sigue protocolo
-
----
-
-## Referencias
-
-- Correo: "[EXTERNAL] Proyecto analítica de conversaciones" - Brian Domecq (20/01/2026)
-- PDFs: "Proyceto analíticas de comunicaciones.pdf", "Analisis de comunicaciones.pdf"
-- Nota Obsidian: "20-01-26 (Kick Off)"
+- El bucket S3 tiene CORS configurado para permitir uploads desde cualquier origen
+- Las credenciales AWS son temporales (expiran cada 12-24h)
+- El frontend usa React con tema oscuro
+- Background aplicado a html y body para evitar fondo blanco en overscroll (macOS/iOS)

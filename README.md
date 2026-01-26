@@ -1,153 +1,111 @@
-# Analítica de Conversaciones - Emova Movilidad SA
+# Emova - Analítica de Conversaciones
 
-Sistema de evaluación de calidad de comunicaciones de audio para operadores del metro de Buenos Aires utilizando servicios de AWS.
+Sistema de evaluación de calidad en comunicaciones operativas del metro de Buenos Aires, utilizando servicios de AWS.
 
-## Contexto
+## Demo en Vivo
 
-Emova Movilidad SA opera la red de transporte subterráneo más importante de Argentina (6 líneas de subte + premetro). Este proyecto desarrolla un modelo de IA para evaluar la calidad de las comunicaciones de audio entre actores operativos:
-
-- Conductores
-- PCO (Puesto Central de Operaciones)
-- Mantenimiento
-- Señales
-
-### Objetivo
-
-Evaluar grabaciones de audio contra el manual de comunicación de la Universidad de La Plata, generando un scoring (0-10) con justificación detallada.
-
-### Criterios de Evaluación
-
-El sistema evalúa las comunicaciones según estándares UIC 751-3 y normativas ALAF:
-
-| Criterio | Peso | Descripción |
-|----------|------|-------------|
-| Fraseología | 25% | Uso de términos oficiales: "Afirmativo", "Copiado", "Solicito", "Confirme" |
-| Claridad | 25% | Mensaje completo, sin ambigüedades, ubicación exacta |
-| Protocolo | 25% | Estructura: Identificación → Mensaje → Confirmación |
-| Formalidad | 25% | Lenguaje profesional, sin apodos ni coloquialismos |
-
-**Escala de scoring:**
-- 9-10: Excelente (comunicación modelo)
-- 7-8: Muy bueno (mínimas desviaciones)
-- 5-6: Aceptable (algunas falencias)
-- 3-4: Deficiente (múltiples errores)
-- 1-2: Muy deficiente (no sigue protocolo)
-
-**Errores comunes penalizados:**
-- Uso de apodos ("Pecho", "Claudito", "amigo")
-- Repetición innecesaria ("copiado, copiado, copiado")
-- Falta de identificación de emisor/receptor
-- Expresiones coloquiales ("dale", "le pego un vistazo")
+**URL:** https://main.d1qfd0b1qv6z20.amplifyapp.com/
 
 ## Arquitectura
 
 ```
-┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌───────────┐
-│   Audio     │───▶│   Amazon     │───▶│   Amazon    │───▶│  Scoring  │
-│   (S3)      │    │  Transcribe  │    │   Bedrock   │    │   JSON    │
-└─────────────┘    └──────────────┘    └─────────────┘    └───────────┘
-      │                   │                   │
-      ▼                   ▼                   ▼
-   Trigger           Transcripción       Evaluación
-   Lambda            + Diarización       vs Manual
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Frontend  │────▶│  API Gateway │────▶│   Lambda    │────▶│  Transcribe │
+│  (Amplify)  │     │              │     │             │     │             │
+└─────────────┘     └─────────────┘     └──────┬──────┘     └─────────────┘
+                                               │
+                                               ▼
+                                        ┌─────────────┐
+                                        │   Bedrock   │
+                                        │ Claude 3.5  │
+                                        └─────────────┘
 ```
 
-## Servicios AWS
+## Servicios AWS Utilizados
 
-| Servicio | Función |
-|----------|---------|
-| Amazon S3 | Almacenamiento de audios |
-| Amazon Transcribe | Transcripción de audio (es-ES, speaker diarization) |
-| Amazon Bedrock | Evaluación inteligente contra manual (Claude 3.5 Sonnet) |
-| AWS Lambda | Procesamiento serverless |
-| IAM | Roles y permisos |
+| Servicio | Uso |
+|----------|-----|
+| **Amazon Transcribe** | Transcripción de audio a texto (es-ES) |
+| **Amazon Bedrock** | Evaluación con Claude 3.5 Sonnet v2 |
+| **Amazon S3** | Almacenamiento de audios |
+| **AWS Lambda** | Procesamiento serverless |
+| **Amazon API Gateway** | API REST |
+| **AWS Amplify** | Hosting del frontend |
 
-### Selección de Modelo LLM
+## Criterios de Evaluación
 
-Se utiliza **Claude 3.5 Sonnet** (`anthropic.claude-3-5-sonnet-20241022-v2:0`) por:
+Basados en estándares UIC 751-3 y ALAF:
 
-- Balance óptimo costo/calidad para análisis de texto estructurado
-- Respuesta rápida (~3-5s) ideal para demos en vivo
-- Costo: $3/1M input, $15/1M output
-
-Alternativas consideradas:
-- Claude 4 Sonnet: Similar costo, mejor para sub-agentes (no necesario aquí)
-- Claude 4.5 Opus: Más potente pero 40% más costoso, para agentes multi-step
+| Criterio | Peso | Descripción |
+|----------|------|-------------|
+| **Fraseología** | 25% | Uso de términos oficiales (Afirmativo, Copiado, Solicito) |
+| **Claridad** | 25% | Mensaje completo, sin ambigüedades |
+| **Protocolo** | 25% | Identificación emisor/receptor, estructura correcta |
+| **Formalidad** | 25% | Lenguaje profesional, sin coloquialismos |
 
 ## Estructura del Proyecto
 
 ```
-├── src/                    # Código fuente
-│   ├── transcribe_handler.py
-│   └── analysis_handler.py
-├── docs/                   # Documentación
-│   ├── cliente/            # Documentos del cliente
-│   └── investigacion/      # Estándares y criterios técnicos
+├── frontend/               # React app
+│   ├── src/
+│   │   ├── App.js         # Componente principal
+│   │   └── App.css        # Estilos
+│   └── public/
+├── src/                    # Lambdas
+│   ├── analyze_handler.py # Transcribe + Bedrock
+│   └── upload_handler.py  # URLs presignadas S3
 ├── config/
-│   └── prompts/            # Prompts para Bedrock
-├── scripts/                # Scripts de utilidad
-├── template.yaml           # SAM template
-├── README.md
-└── memory.md               # Contexto del proyecto
+│   └── prompts/
+│       └── evaluation_prompt.txt
+├── docs/
+│   ├── cliente/           # PDFs del cliente
+│   └── investigacion/     # Documentación técnica
+├── template.yaml          # SAM template
+├── amplify.yml            # Config Amplify
+└── memory.md              # Contexto del proyecto
 ```
 
-## Documentación Técnica
+## Recursos Desplegados
 
-- `docs/investigacion/estandares_comunicaciones_ferroviarias_completo.md` - Estándares UIC y ALAF
-- `docs/investigacion/criterios_tecnicos_sistema_ia.md` - Matriz de evaluación automatizada
-- `docs/cliente/` - Documentos originales del cliente
-
-## Requisitos
-
-- AWS CLI configurado
-- SAM CLI instalado
-- Python 3.11+
-- Acceso a Amazon Bedrock (Claude habilitado)
+- **API Gateway:** https://h7llsoo392.execute-api.us-east-1.amazonaws.com/dev
+- **S3 Bucket:** emova-audio-302263078976-dev
+- **Stack CloudFormation:** emova-analytics
+- **Amplify App ID:** d1qfd0b1qv6z20
 
 ## Despliegue
 
+### Backend (SAM)
 ```bash
-# Construir
 sam build
-
-# Desplegar
-sam deploy --guided
+sam deploy --stack-name emova-analytics --region us-east-1 --capabilities CAPABILITY_IAM --resolve-s3 --tags Project=EMOVA
 ```
 
-Todos los recursos se crean con el tag `Project: EMOVA`.
+### Frontend (Amplify)
+El frontend se despliega automáticamente con cada push a `main`.
 
-## Uso
+## Funcionalidades
 
-1. Subir archivo de audio (.mp3, .wav) al bucket S3 en `input/`
-2. Lambda de transcripción se ejecuta automáticamente
-3. Lambda de análisis evalúa la transcripción
-4. Resultado JSON con scoring disponible en `results/`
+- Subir archivos de audio (MP3, WAV, M4A, OGG)
+- Transcripción automática con Amazon Transcribe
+- Evaluación con IA usando Claude 3.5 Sonnet
+- Visualización de resultados con score circular y barras de progreso
+- Descarga de resultados en JSON o TXT
+- Diseño responsive y tema oscuro
 
-## Output Ejemplo
+## Tags
 
-```json
-{
-  "transcription_key": "transcriptions/comunicacion_001.json",
-  "transcript": "...",
-  "evaluation": {
-    "score": 8,
-    "fraseologia": 9,
-    "claridad": 8,
-    "protocolo": 7,
-    "formalidad": 8,
-    "justification": "...",
-    "errores_detectados": [],
-    "recommendations": []
-  }
-}
-```
+Todos los recursos tienen el tag `Project: EMOVA` para tracking de costos.
 
-## Documentación del Cliente
+## Modelo de IA
 
-- `docs/cliente/Proyceto analíticas de comunicaciones.pdf` - Alcance del proyecto
-- `docs/cliente/Analisis de comunicaciones.pdf` - Ejemplos de análisis
+**Claude 3.5 Sonnet v2** (`us.anthropic.claude-3-5-sonnet-20241022-v2:0`)
 
-## Contacto
+Justificación:
+- Balance óptimo costo/calidad para evaluación de texto
+- Respuesta rápida (< 5 segundos)
+- Suficiente capacidad para análisis de comunicaciones
+- No requiere extended thinking para esta tarea
 
-- **Cliente:** Brian Domecq (Infrastructure Project Lead) - Emova Movilidad SA
-- **AWS:** Rayih Bou (Solutions Architect)
+## Repositorio
+
+https://github.com/RayihBou/emovagenai

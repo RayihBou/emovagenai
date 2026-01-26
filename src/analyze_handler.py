@@ -13,7 +13,7 @@ bedrock = boto3.client('bedrock-runtime')
 s3 = boto3.client('s3')
 
 BUCKET = os.environ['AUDIO_BUCKET']
-MODEL_ID = 'anthropic.claude-3-5-sonnet-20241022-v2:0'
+MODEL_ID = 'us.anthropic.claude-3-5-sonnet-20241022-v2:0'
 
 PROMPT_TEMPLATE = """Eres un evaluador experto en comunicaciones ferroviarias operativas del metro de Buenos Aires.
 
