@@ -6,41 +6,47 @@ Globals:
   Function:
     Runtime: python3.11
     Timeout: 300
-    MemorySize: 256
+    MemorySize: 512
     Tags:
       Project: EMOVA
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,OPTIONS'"
+      AllowHeaders: "'Content-Type'"
+      AllowOrigin: "'*'"
 
 Parameters:
   Environment:
     Type: String
     Default: dev
-    AllowedValues: [dev, prod]
+  AudioBucketName:
+    Type: String
+    Default: emova-audio-302263078976-dev
 
 Resources:
-  # S3 Bucket para audios
-  AudioBucket:
-    Type: AWS::S3::Bucket
+  # API Gateway
+  EmovaApi:
+    Type: AWS::Serverless::Api
     Properties:
-      BucketName: !Sub emova-audio-${AWS::AccountId}-${Environment}
+      Name: !Sub emova-api-${Environment}
+      StageName: !Ref Environment
       Tags:
-        - Key: Project
-          Value: EMOVA
+        Project: EMOVA
 
-  # Lambda: Transcripción de audio
-  TranscribeFunction:
+  # Lambda: Analizar audio (transcribe + bedrock)
+  AnalyzeFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub emova-transcribe-${Environment}
-      Handler: transcribe_handler.handler
+      FunctionName: !Sub emova-analyze-${Environment}
+      Handler: analyze_handler.handler
       CodeUri: src/
+      Timeout: 600
       Environment:
         Variables:
-          AUDIO_BUCKET: !Ref AudioBucket
+          AUDIO_BUCKET: !Ref AudioBucketName
       Policies:
-        - S3ReadPolicy:
-            BucketName: !Ref AudioBucket
-        - S3WritePolicy:
-            BucketName: !Ref AudioBucket
+        - S3CrudPolicy:
+            BucketName: !Ref AudioBucketName
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow
@@ -48,47 +54,43 @@ Resources:
                 - transcribe:StartTranscriptionJob
                 - transcribe:GetTranscriptionJob
               Resource: '*'
-      Events:
-        AudioUpload:
-          Type: S3
-          Properties:
-            Bucket: !Ref AudioBucket
-            Events: s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: prefix
-                    Value: input/
-
-  # Lambda: Análisis con Bedrock
-  AnalysisFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub emova-analysis-${Environment}
-      Handler: analysis_handler.handler
-      CodeUri: src/
-      Environment:
-        Variables:
-          AUDIO_BUCKET: !Ref AudioBucket
-      Policies:
-        - S3ReadPolicy:
-            BucketName: !Ref AudioBucket
-        - S3WritePolicy:
-            BucketName: !Ref AudioBucket
-        - Version: '2012-10-17'
-          Statement:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
               Resource: '*'
+      Events:
+        AnalyzeApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref EmovaApi
+            Path: /analyze
+            Method: post
+
+  # Lambda: Obtener URL presignada para upload
+  UploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub emova-upload-url-${Environment}
+      Handler: upload_handler.handler
+      CodeUri: src/
+      Environment:
+        Variables:
+          AUDIO_BUCKET: !Ref AudioBucketName
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref AudioBucketName
+      Events:
+        UploadApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref EmovaApi
+            Path: /upload-url
+            Method: get
 
 Outputs:
-  AudioBucketName:
-    Description: Bucket para audios
-    Value: !Ref AudioBucket
-  TranscribeFunctionArn:
-    Description: Lambda de transcripción
-    Value: !GetAtt TranscribeFunction.Arn
-  AnalysisFunctionArn:
+  ApiUrl:
+    Description: API Gateway URL
+    Value: !Sub https://${EmovaApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+  AnalyzeFunctionArn:
     Description: Lambda de análisis
-    Value: !GetAtt AnalysisFunction.Arn
+    Value: !GetAtt AnalyzeFunction.Arn

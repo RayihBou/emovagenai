@@ -1,53 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import './App.css';
 
+const API_URL = 'https://h7llsoo392.execute-api.us-east-1.amazonaws.com/dev';
 const LOGO_EMOVA = 'https://emova.com.ar/wp-content/uploads/2023/09/aplicacion-ppal-logotag-concesionario-digital-footer-web.png';
 const LOGO_GOBIERNO = 'https://www.argentina.gob.ar/profiles/argentinagobar/themes/argentinagobar/argentinagobar_theme/logo_argentina-azul.svg';
 const LOGO_AWS = 'https://a0.awsstatic.com/libra-css/images/logos/aws_smile-header-desktop-en-white_59x35.png';
 
 function App() {
   const [file, setFile] = useState(null);
-  const [status, setStatus] = useState('idle');
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
   const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-    setStatus('ready');
-    setResult(null);
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setResult(null);
+      setError(null);
+    }
   };
 
   const handleAnalyze = async () => {
     if (!file) return;
     
-    setStatus('transcribing');
-    await new Promise(r => setTimeout(r, 2000));
+    setLoading(true);
+    setError(null);
+    setResult(null);
     
-    setStatus('analyzing');
-    await new Promise(r => setTimeout(r, 2000));
-    
-    setStatus('complete');
-    setResult({
-      score: 7.5,
-      fraseologia: 8,
-      claridad: 7,
-      protocolo: 8,
-      formalidad: 7,
-      justification: "La comunicación sigue parcialmente el protocolo establecido. Se detectó uso correcto de 'Copiado' pero falta identificación formal del emisor.",
-      errores_detectados: [
-        "Uso de apodo 'Pecho' en lugar de identificación formal",
-        "Falta confirmación explícita del receptor"
-      ],
-      recommendations: [
-        "Utilizar identificación formal: 'Tren [número] para PCO'",
-        "Confirmar recepción con 'Copiado' o 'Recibido'"
-      ]
-    });
+    try {
+      // 1. Obtener URL presignada
+      setStatus('Obteniendo URL de carga...');
+      const uploadRes = await fetch(`${API_URL}/upload-url?filename=${encodeURIComponent(file.name)}`);
+      if (!uploadRes.ok) throw new Error('Error obteniendo URL de carga');
+      const { upload_url, key } = await uploadRes.json();
+      
+      // 2. Subir archivo a S3
+      setStatus('Subiendo audio a S3...');
+      const uploadToS3 = await fetch(upload_url, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': 'audio/mpeg' }
+      });
+      if (!uploadToS3.ok) throw new Error('Error subiendo archivo');
+      
+      // 3. Analizar
+      setStatus('Transcribiendo audio (esto puede tomar 1-2 minutos)...');
+      const analyzeRes = await fetch(`${API_URL}/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio_key: key })
+      });
+      
+      const data = await analyzeRes.json();
+      
+      if (!analyzeRes.ok) {
+        throw new Error(data.error || 'Error en el análisis');
+      }
+      
+      setResult({
+        transcript: data.transcript,
+        ...data.evaluation
+      });
+      setStatus('');
+      
+    } catch (err) {
+      setError(err.message);
+      setStatus('');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getScoreColor = (score) => {
     if (score >= 8) return '#22c55e';
     if (score >= 6) return '#eab308';
-    if (score >= 4) return '#f97316';
     return '#ef4444';
   };
 
@@ -59,118 +88,104 @@ function App() {
           <img src={LOGO_GOBIERNO} alt="Gobierno Argentina" className="logo-gobierno" />
         </div>
         <h1>Analítica de Conversaciones</h1>
-        <p>Sistema de evaluación de calidad de comunicaciones operativas</p>
+        <p className="subtitle">Evaluación de calidad en comunicaciones operativas</p>
       </header>
 
       <main className="main">
         <section className="upload-section">
-          <h2>Cargar Audio</h2>
-          <div className="upload-box">
-            <input 
-              type="file" 
-              accept="audio/*" 
+          <div className="upload-box" onClick={() => fileInputRef.current?.click()}>
+            <input
+              type="file"
+              ref={fileInputRef}
               onChange={handleFileChange}
-              id="audio-input"
+              accept="audio/*"
+              style={{ display: 'none' }}
             />
-            <label htmlFor="audio-input" className="upload-label">
-              {file ? file.name : 'Seleccionar archivo de audio (.mp3, .wav)'}
-            </label>
+            <div className="upload-icon">🎙️</div>
+            <p>{file ? file.name : 'Seleccionar archivo de audio'}</p>
+            <span className="upload-hint">MP3, WAV, M4A</span>
           </div>
+          
           <button 
-            className="analyze-btn"
+            className="analyze-btn" 
             onClick={handleAnalyze}
-            disabled={!file || status === 'transcribing' || status === 'analyzing'}
+            disabled={!file || loading}
           >
-            {status === 'transcribing' ? 'Transcribiendo...' : 
-             status === 'analyzing' ? 'Analizando...' : 'Analizar Comunicación'}
+            {loading ? 'Procesando...' : 'Analizar Comunicación'}
           </button>
-        </section>
-
-        <section className="process-section">
-          <h2>Proceso</h2>
-          <div className="process-steps">
-            <div className={`step ${status !== 'idle' ? 'active' : ''} ${['transcribing','analyzing','complete'].includes(status) ? 'done' : ''}`}>
-              <div className="step-icon">1</div>
-              <span>Carga de Audio</span>
-            </div>
-            <div className="step-arrow">→</div>
-            <div className={`step ${['transcribing','analyzing','complete'].includes(status) ? 'active' : ''} ${['analyzing','complete'].includes(status) ? 'done' : ''}`}>
-              <div className="step-icon">2</div>
-              <span>Amazon Transcribe</span>
-            </div>
-            <div className="step-arrow">→</div>
-            <div className={`step ${['analyzing','complete'].includes(status) ? 'active' : ''} ${status === 'complete' ? 'done' : ''}`}>
-              <div className="step-icon">3</div>
-              <span>Amazon Bedrock</span>
-            </div>
-            <div className="step-arrow">→</div>
-            <div className={`step ${status === 'complete' ? 'active done' : ''}`}>
-              <div className="step-icon">4</div>
-              <span>Scoring</span>
-            </div>
-          </div>
+          
+          {status && <p className="status">{status}</p>}
+          {error && <p className="error">{error}</p>}
         </section>
 
         {result && (
           <section className="results-section">
-            <h2>Resultados</h2>
-            <div className="score-main">
-              <div className="score-circle" style={{borderColor: getScoreColor(result.score)}}>
-                <span className="score-value" style={{color: getScoreColor(result.score)}}>{result.score}</span>
-                <span className="score-label">/ 10</span>
+            <div className="score-card">
+              <div className="score-main" style={{ borderColor: getScoreColor(result.score) }}>
+                <span className="score-value" style={{ color: getScoreColor(result.score) }}>
+                  {result.score?.toFixed(1)}
+                </span>
+                <span className="score-label">Puntuación General</span>
+              </div>
+              
+              <div className="score-details">
+                <div className="score-item">
+                  <span className="score-name">Fraseología</span>
+                  <span className="score-num" style={{ color: getScoreColor(result.fraseologia) }}>
+                    {result.fraseologia}
+                  </span>
+                </div>
+                <div className="score-item">
+                  <span className="score-name">Claridad</span>
+                  <span className="score-num" style={{ color: getScoreColor(result.claridad) }}>
+                    {result.claridad}
+                  </span>
+                </div>
+                <div className="score-item">
+                  <span className="score-name">Protocolo</span>
+                  <span className="score-num" style={{ color: getScoreColor(result.protocolo) }}>
+                    {result.protocolo}
+                  </span>
+                </div>
+                <div className="score-item">
+                  <span className="score-name">Formalidad</span>
+                  <span className="score-num" style={{ color: getScoreColor(result.formalidad) }}>
+                    {result.formalidad}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="scores-grid">
-              <div className="score-item">
-                <span className="score-name">Fraseología</span>
-                <div className="score-bar">
-                  <div className="score-fill" style={{width: `${result.fraseologia * 10}%`, background: getScoreColor(result.fraseologia)}}></div>
-                </div>
-                <span className="score-num">{result.fraseologia}</span>
+            {result.transcript && (
+              <div className="transcript-card">
+                <h3>Transcripción</h3>
+                <p>{result.transcript}</p>
               </div>
-              <div className="score-item">
-                <span className="score-name">Claridad</span>
-                <div className="score-bar">
-                  <div className="score-fill" style={{width: `${result.claridad * 10}%`, background: getScoreColor(result.claridad)}}></div>
-                </div>
-                <span className="score-num">{result.claridad}</span>
-              </div>
-              <div className="score-item">
-                <span className="score-name">Protocolo</span>
-                <div className="score-bar">
-                  <div className="score-fill" style={{width: `${result.protocolo * 10}%`, background: getScoreColor(result.protocolo)}}></div>
-                </div>
-                <span className="score-num">{result.protocolo}</span>
-              </div>
-              <div className="score-item">
-                <span className="score-name">Formalidad</span>
-                <div className="score-bar">
-                  <div className="score-fill" style={{width: `${result.formalidad * 10}%`, background: getScoreColor(result.formalidad)}}></div>
-                </div>
-                <span className="score-num">{result.formalidad}</span>
-              </div>
-            </div>
+            )}
 
-            <div className="justification">
+            <div className="analysis-card">
               <h3>Justificación</h3>
               <p>{result.justification}</p>
             </div>
 
-            {result.errores_detectados.length > 0 && (
-              <div className="errors">
+            {result.errores_detectados?.length > 0 && (
+              <div className="errors-card">
                 <h3>Errores Detectados</h3>
                 <ul>
-                  {result.errores_detectados.map((e, i) => <li key={i}>{e}</li>)}
+                  {result.errores_detectados.map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
                 </ul>
               </div>
             )}
 
-            {result.recommendations.length > 0 && (
-              <div className="recommendations">
+            {result.recommendations?.length > 0 && (
+              <div className="recommendations-card">
                 <h3>Recomendaciones</h3>
                 <ul>
-                  {result.recommendations.map((r, i) => <li key={i}>{r}</li>)}
+                  {result.recommendations.map((rec, i) => (
+                    <li key={i}>{rec}</li>
+                  ))}
                 </ul>
               </div>
             )}
