@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Emova - Analítica de Conversaciones
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 300
+    MemorySize: 256
+    Tags:
+      Project: EMOVA
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+
+Resources:
+  # S3 Bucket para audios
+  AudioBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub emova-audio-${AWS::AccountId}-${Environment}
+      Tags:
+        - Key: Project
+          Value: EMOVA
+
+  # Lambda: Transcripción de audio
+  TranscribeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub emova-transcribe-${Environment}
+      Handler: transcribe_handler.handler
+      CodeUri: src/
+      Environment:
+        Variables:
+          AUDIO_BUCKET: !Ref AudioBucket
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref AudioBucket
+        - S3WritePolicy:
+            BucketName: !Ref AudioBucket
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - transcribe:StartTranscriptionJob
+                - transcribe:GetTranscriptionJob
+              Resource: '*'
+      Events:
+        AudioUpload:
+          Type: S3
+          Properties:
+            Bucket: !Ref AudioBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: input/
+
+  # Lambda: Análisis con Bedrock
+  AnalysisFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub emova-analysis-${Environment}
+      Handler: analysis_handler.handler
+      CodeUri: src/
+      Environment:
+        Variables:
+          AUDIO_BUCKET: !Ref AudioBucket
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref AudioBucket
+        - S3WritePolicy:
+            BucketName: !Ref AudioBucket
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+
+Outputs:
+  AudioBucketName:
+    Description: Bucket para audios
+    Value: !Ref AudioBucket
+  TranscribeFunctionArn:
+    Description: Lambda de transcripción
+    Value: !GetAtt TranscribeFunction.Arn
+  AnalysisFunctionArn:
+    Description: Lambda de análisis
+    Value: !GetAtt AnalysisFunction.Arn
