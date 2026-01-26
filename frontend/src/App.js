@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './App.css';
 
-const LOGO_EMOVA = 'https://emova.com.ar/wp-content/uploads/thegem-logos/logo_3ffb1bfb6d3d34e92cd05ba719f4d862_1x.jpg';
+const LOGO_EMOVA = 'https://emova.com.ar/wp-content/uploads/2023/09/aplicacion-ppal-logotag-concesionario-digital-footer-web.png';
 const LOGO_GOBIERNO = 'https://www.argentina.gob.ar/profiles/argentinagobar/themes/argentinagobar/argentinagobar_theme/logo_argentina-azul.svg';
 
 function App() {
