@@ -189,7 +189,7 @@ function App() {
     html, body { background: #1a1a2e; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
     .header { text-align: center; margin-bottom: 40px; }
-    .header h1 { color: #ff9900; font-size: 2.5rem; margin-bottom: 10px; }
+    .header h1 { font-size: 2rem; font-weight: 700; margin-bottom: 10px; background: linear-gradient(90deg, #00d4ff, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .header p { color: #94a3b8; font-size: 1.1rem; }
     .card { background: #16213e; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #334155; }
     .score-main { text-align: center; margin-bottom: 40px; }
