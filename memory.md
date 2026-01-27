@@ -8,23 +8,28 @@ Demo para Emova Movilidad SA (operador del metro de Buenos Aires) para evaluar l
 **Cliente:** Emova Movilidad SA
 **Contacto:** Brian Domecq
 
-## Estado Actual: DEMO FUNCIONAL CON DATOS REALES
+## Estado Actual: ARQUITECTURA ASINCRONA IMPLEMENTADA
 
 ### URL de la Demo
 https://main.d1qfd0b1qv6z20.amplifyapp.com/
 
-### Flujo Implementado (Sesión Completa)
-1. Usuario selecciona múltiples archivos WAV + XMLs de una sesión TETRA
-2. Archivos se suben a S3
-3. Lambda parsea XMLs para obtener metadatos (quién habla cuándo)
-4. Cada WAV se transcribe con Amazon Transcribe (es-ES)
-5. Transcripciones se enriquecen con metadatos de operadores
-6. Bedrock Claude 3.5 Sonnet evalúa la sesión completa
-7. Resultados incluyen:
-   - Score general y por criterio
-   - Timeline de intervenciones
-   - Análisis individual por operador
-   - Descarga JSON/TXT
+### Problema Resuelto
+**Problema:** API Gateway tiene timeout de 29 segundos, pero procesar 10 audios con Transcribe toma varios minutos.
+
+**Solución:** Arquitectura asíncrona con polling.
+
+### Flujo Asíncrono Implementado
+1. **Frontend sube archivos:** WAV + XMLs a S3
+2. **POST /analyze-session:** Recibe archivos, guarda job en S3, invoca Lambda async, retorna job_id inmediatamente (<1 seg)
+3. **Lambda background:** Procesa audios con Transcribe, evalúa con Bedrock, guarda resultado en S3 (hasta 15 min)
+4. **GET /job/{job_id}:** Frontend hace polling cada 5 seg, retorna status y resultado
+5. **Cuando status=done:** Muestra resultados completos
+
+### Estados del Job
+- **pending:** Job creado, esperando procesamiento
+- **processing:** Lambda ejecutándose en background
+- **done:** Procesamiento completado, resultados disponibles
+- **error:** Error durante el procesamiento
 
 ## Integración Sistema TETRA
 
@@ -79,7 +84,7 @@ Prueba de audio/
 
 - **API Base:** https://h7llsoo392.execute-api.us-east-1.amazonaws.com/dev
 - **Upload URL:** GET /upload-url?filename={path/nombre}
-- **Analyze Session:** POST /analyze-session
+- **Analyze Session (Async):** POST /analyze-session
   ```json
   {
     "audio_keys": ["sessions/123/audios/138928185.wav"],
@@ -88,6 +93,16 @@ Prueba de audio/
       "callrefs": "sessions/123/CallRefs.xml",
       "recordings": ["sessions/123/recordings/134827077.xml"]
     }
+  }
+  ```
+  **Respuesta:** `{"job_id": "uuid-123"}`
+
+- **Job Status (Polling):** GET /job/{job_id}
+  ```json
+  {
+    "status": "done",
+    "result": {...},
+    "progress": "8/10 audios procesados"
   }
   ```
 
@@ -102,6 +117,13 @@ Prueba de audio/
 | `template.yaml` | SAM template |
 
 ## Historial de Cambios
+
+### 2026-01-28
+- **ARQUITECTURA ASINCRONA:** Implementada para resolver timeout de API Gateway
+- Nuevo endpoint GET /job/{job_id} para polling de status
+- Lambda procesa en background hasta 15 minutos
+- Frontend con polling cada 5 segundos
+- Estados: pending → processing → done/error
 
 ### 2026-01-27
 - Recibidos datos reales del cliente (10 WAV + XMLs)
@@ -119,6 +141,9 @@ Prueba de audio/
 
 ## Pendientes
 
+- [ ] Implementar nueva Lambda job_status_handler.py
+- [ ] Actualizar analyze_session_handler.py para procesamiento asíncrono
+- [ ] Modificar frontend para polling con estados visuales
 - [ ] Probar con los 10 audios del cliente como sesión completa
 - [ ] Validar que Transcribe detecte correctamente el español argentino
 - [ ] Ajustar prompt si es necesario según resultados reales

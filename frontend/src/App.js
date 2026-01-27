@@ -10,6 +10,7 @@ function App() {
   const [files, setFiles] = useState({ wavs: [], xmls: [], holders: null, callrefs: null });
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
+  const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
@@ -56,12 +57,45 @@ function App() {
     return key;
   };
 
+  const pollJobStatus = async (jobId) => {
+    return new Promise((resolve, reject) => {
+      const interval = setInterval(async () => {
+        try {
+          const res = await fetch(`${API_URL}/job/${jobId}`);
+          const data = await res.json();
+          
+          if (!res.ok) {
+            clearInterval(interval);
+            reject(new Error(data.error || 'Error consultando estado del job'));
+            return;
+          }
+          
+          setProgress(data.progress || 0);
+          
+          if (data.status === 'processing') {
+            setStatus(`Procesando análisis... ${data.progress || 0}%`);
+          } else if (data.status === 'done') {
+            clearInterval(interval);
+            resolve(data.result);
+          } else if (data.status === 'error') {
+            clearInterval(interval);
+            reject(new Error(data.error || 'Error en el procesamiento'));
+          }
+        } catch (err) {
+          clearInterval(interval);
+          reject(err);
+        }
+      }, 5000);
+    });
+  };
+
   const handleAnalyze = async () => {
     if (files.wavs.length === 0) return;
     
     setLoading(true);
     setError(null);
     setResult(null);
+    setProgress(0);
     
     try {
       const sessionId = Date.now();
@@ -92,31 +126,36 @@ function App() {
         );
       }
       
-      // 3. Analizar sesión
-      setStatus('Analizando sesión completa (esto puede tomar varios minutos)...');
+      // 3. Iniciar análisis asíncrono
+      setStatus('Iniciando análisis...');
       const analyzeRes = await fetch(`${API_URL}/analyze-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ audio_keys: audioKeys, xml_keys: xmlKeys })
       });
       
-      const data = await analyzeRes.json();
+      const jobData = await analyzeRes.json();
       
       if (!analyzeRes.ok) {
-        throw new Error(data.error || 'Error en el análisis');
+        throw new Error(jobData.error || 'Error iniciando el análisis');
       }
       
+      // 4. Polling hasta completar
+      const result = await pollJobStatus(jobData.job_id);
+      
       setResult({
-        transcript: data.transcript,
-        sessionInfo: data.session_info,
-        interventions: data.interventions,
-        ...data.evaluation
+        transcript: result.transcript,
+        sessionInfo: result.session_info,
+        interventions: result.interventions,
+        ...result.evaluation
       });
-      setStatus('');
+      setStatus('Análisis completado');
+      setProgress(100);
       
     } catch (err) {
       setError(err.message);
       setStatus('');
+      setProgress(0);
     } finally {
       setLoading(false);
     }
@@ -271,7 +310,17 @@ ${result.analisis_por_operador ? Object.entries(result.analisis_por_operador).ma
             {loading ? 'Procesando...' : `Analizar Sesión (${files.wavs.length} audios)`}
           </button>
           
-          {status && <p className="status">{status}</p>}
+          {status && (
+            <div className="status-container">
+              <p className="status">{status}</p>
+              {loading && progress > 0 && (
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: `${progress}%` }}></div>
+                  <span className="progress-text">{progress}%</span>
+                </div>
+              )}
+            </div>
+          )}
           {error && <p className="error">{error}</p>}
         </section>
 

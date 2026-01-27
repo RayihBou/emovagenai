@@ -1,12 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Emova - Analítica de Conversaciones
+Description: Emova - Analítica de Conversaciones (Arquitectura Asíncrona)
 
 Globals:
   Function:
     Runtime: python3.11
-    Timeout: 300
-    MemorySize: 512
+    Timeout: 30
+    MemorySize: 256
     Tags:
       Project: EMOVA
   Api:
@@ -24,7 +24,6 @@ Parameters:
     Default: emova-audio-302263078976-dev
 
 Resources:
-  # API Gateway
   EmovaApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -33,12 +32,36 @@ Resources:
       Tags:
         Project: EMOVA
 
-  # Lambda: Analizar sesión completa (múltiples WAV + XML)
-  AnalyzeSessionFunction:
+  # Lambda: Iniciar job asíncrono
+  StartJobFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub emova-analyze-session-${Environment}
-      Handler: analyze_session_handler.handler
+      FunctionName: !Sub emova-start-job-${Environment}
+      Handler: start_job_handler.handler
+      CodeUri: src/
+      Environment:
+        Variables:
+          AUDIO_BUCKET: !Ref AudioBucketName
+          PROCESS_FUNCTION_NAME: !Ref ProcessJobFunction
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref AudioBucketName
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ProcessJobFunction
+      Events:
+        StartJobApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref EmovaApi
+            Path: /analyze-session
+            Method: post
+
+  # Lambda: Procesar job en background
+  ProcessJobFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub emova-process-job-${Environment}
+      Handler: process_job_handler.handler
       CodeUri: src/
       Timeout: 900
       MemorySize: 1024
@@ -51,54 +74,32 @@ Resources:
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow
-              Action:
-                - transcribe:StartTranscriptionJob
-                - transcribe:GetTranscriptionJob
+              Action: [transcribe:StartTranscriptionJob, transcribe:GetTranscriptionJob]
               Resource: '*'
             - Effect: Allow
-              Action:
-                - bedrock:InvokeModel
+              Action: bedrock:InvokeModel
               Resource: '*'
-      Events:
-        AnalyzeSessionApi:
-          Type: Api
-          Properties:
-            RestApiId: !Ref EmovaApi
-            Path: /analyze-session
-            Method: post
 
-  # Lambda: Analizar audio individual (mantener compatibilidad)
-  AnalyzeFunction:
+  # Lambda: Consultar estado del job
+  JobStatusFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub emova-analyze-${Environment}
-      Handler: analyze_handler.handler
+      FunctionName: !Sub emova-job-status-${Environment}
+      Handler: job_status_handler.handler
       CodeUri: src/
-      Timeout: 600
       Environment:
         Variables:
           AUDIO_BUCKET: !Ref AudioBucketName
       Policies:
-        - S3CrudPolicy:
+        - S3ReadPolicy:
             BucketName: !Ref AudioBucketName
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - transcribe:StartTranscriptionJob
-                - transcribe:GetTranscriptionJob
-              Resource: '*'
-            - Effect: Allow
-              Action:
-                - bedrock:InvokeModel
-              Resource: '*'
       Events:
-        AnalyzeApi:
+        JobStatusApi:
           Type: Api
           Properties:
             RestApiId: !Ref EmovaApi
-            Path: /analyze
-            Method: post
+            Path: /job/{job_id}
+            Method: get
 
   # Lambda: Obtener URL presignada para upload
   UploadUrlFunction:
@@ -125,6 +126,3 @@ Outputs:
   ApiUrl:
     Description: API Gateway URL
     Value: !Sub https://${EmovaApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
-  AnalyzeFunctionArn:
-    Description: Lambda de análisis
-    Value: !GetAtt AnalyzeFunction.Arn

@@ -6,20 +6,49 @@ Sistema de evaluación de calidad en comunicaciones operativas del metro de Buen
 
 **URL:** https://main.d1qfd0b1qv6z20.amplifyapp.com/
 
-## Arquitectura
+## Arquitectura Asíncrona
+
+**Problema Resuelto:** API Gateway tiene timeout de 29 segundos, pero procesar 10 audios con Transcribe toma varios minutos.
+
+**Solución:** Arquitectura asíncrona con polling para procesamiento en background.
 
 ```
-┌─────────────────┐     ┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
-│   Frontend      │────▶│ API Gateway │────▶│ Lambda Session   │────▶│  Transcribe │
-│   (Amplify)     │     │             │     │ (WAV + XML)      │     │   (es-ES)   │
-│                 │     │             │     └────────┬─────────┘     └─────────────┘
-│ - Multi upload  │     │             │              │
-│ - Timeline      │     │             │              ▼
-│ - Por operador  │     │             │       ┌─────────────┐
-└─────────────────┘     └─────────────┘       │   Bedrock   │
-                                              │ Claude 3.5  │
-                                              └─────────────┘
+┌─────────────────┐     ┌─────────────┐     ┌──────────────────┐
+│   Frontend      │────▶│ API Gateway │────▶│ POST /analyze    │
+│   (Amplify)     │     │             │     │ session          │
+│                 │     │             │     │ (retorna job_id) │
+│ - Multi upload  │     │             │     └────────┬─────────┘
+│ - Polling UI    │     │             │              │
+│ - Estados       │     │             │              ▼
+└─────┬───────────┘     │             │       ┌─────────────┐
+      │                 │             │       │   Lambda    │
+      │ GET /job/{id}   │             │       │ Background  │
+      └─────────────────┤             │       │ Processing  │
+                        │             │       └─────┬───────┘
+                        └─────────────┘             │
+                                                    ▼
+                                             ┌─────────────┐     ┌─────────────┐
+                                             │  Transcribe │────▶│   Bedrock   │
+                                             │   (es-ES)   │     │ Claude 3.5  │
+                                             └─────────────┘     └─────────────┘
 ```
+
+### Flujo Asíncrono
+
+1. **Frontend sube archivos** WAV + XMLs a S3
+2. **POST /analyze-session** retorna `{job_id}` inmediatamente (<1 seg)
+3. **Lambda procesa en background** hasta 15 minutos
+4. **Frontend hace polling** cada 5 segundos a GET /job/{job_id}
+5. **Cuando status=done** muestra resultados completos
+
+### Estados del Job
+
+| Estado | Descripción |
+|--------|-------------|
+| `pending` | Job creado, esperando procesamiento |
+| `processing` | Lambda ejecutándose en background |
+| `done` | Procesamiento completado, resultados disponibles |
+| `error` | Error durante el procesamiento |
 
 ## Integración con Sistema TETRA
 
@@ -69,16 +98,18 @@ Basados en estándares UIC 751-3 y ALAF:
 
 ## Funcionalidades
 
-- Subir múltiples archivos WAV + XML de una sesión
-- Transcripción automática con Amazon Transcribe
-- Enriquecimiento con metadatos TETRA (quién habla cuándo)
-- Evaluación con IA usando Claude 3.5 Sonnet
-- Visualización de resultados:
+- **Subida asíncrona:** Múltiples archivos WAV + XML de una sesión
+- **Procesamiento en background:** Sin timeouts de API Gateway
+- **Polling en tiempo real:** Estados visuales del progreso
+- **Transcripción automática:** Amazon Transcribe (es-ES)
+- **Enriquecimiento con metadatos TETRA:** Quién habla cuándo
+- **Evaluación con IA:** Claude 3.5 Sonnet
+- **Visualización de resultados:**
   - Score circular con animación
   - Barras de progreso por criterio
   - Timeline de intervenciones
   - Análisis individual por operador
-- Descarga de resultados en JSON o TXT
+- **Descarga de resultados:** JSON o TXT
 
 ## Estructura del Proyecto
 
@@ -89,7 +120,8 @@ Basados en estándares UIC 751-3 y ALAF:
 │   │   └── App.css        # Estilos
 │   └── public/
 ├── src/                    # Lambdas
-│   ├── analyze_session_handler.py  # Análisis de sesión (múltiples WAV+XML)
+│   ├── analyze_session_handler.py  # Análisis asíncrono (múltiples WAV+XML)
+│   ├── job_status_handler.py       # Polling de status del job
 │   ├── analyze_handler.py          # Análisis individual (legacy)
 │   └── upload_handler.py           # URLs presignadas S3
 ├── config/
@@ -121,8 +153,9 @@ Basados en estándares UIC 751-3 y ALAF:
 | Método | Path | Descripción |
 |--------|------|-------------|
 | GET | `/upload-url` | Obtener URL presignada para upload |
-| POST | `/analyze` | Analizar audio individual |
-| POST | `/analyze-session` | Analizar sesión completa (múltiples WAV+XML) |
+| POST | `/analyze` | Analizar audio individual (legacy) |
+| POST | `/analyze-session` | Iniciar análisis asíncrono de sesión → `{job_id}` |
+| GET | `/job/{job_id}` | Obtener status y resultado del job (polling) |
 
 ## Despliegue
 
