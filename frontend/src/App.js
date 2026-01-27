@@ -41,9 +41,17 @@ function App() {
   const uploadFile = async (file, prefix) => {
     const res = await fetch(`${API_URL}/upload-url?filename=${prefix}/${encodeURIComponent(file.name)}`);
     const { upload_url, key } = await res.json();
+    
+    // Determinar content-type que coincida con el presigned URL
+    let contentType = 'application/octet-stream';
+    if (file.name.toLowerCase().endsWith('.wav')) contentType = 'audio/wav';
+    else if (file.name.toLowerCase().endsWith('.xml')) contentType = 'application/xml';
+    else if (file.name.toLowerCase().endsWith('.mp3')) contentType = 'audio/mpeg';
+    
     await fetch(upload_url, {
       method: 'PUT',
-      body: file
+      body: file,
+      headers: { 'Content-Type': contentType }
     });
     return key;
   };
