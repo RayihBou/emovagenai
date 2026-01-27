@@ -271,11 +271,10 @@ section h2 {
 }
 
 .download-buttons {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
   display: flex;
   gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
 }
 
 .download-btn {
