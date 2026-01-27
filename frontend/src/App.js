@@ -7,7 +7,7 @@ const LOGO_GOBIERNO = 'https://www.argentina.gob.ar/profiles/argentinagobar/them
 const LOGO_AWS = 'https://a0.awsstatic.com/libra-css/images/logos/aws_smile-header-desktop-en-white_59x35.png';
 
 function App() {
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState({ wavs: [], xmls: [], holders: null, callrefs: null });
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [result, setResult] = useState(null);
@@ -15,43 +15,70 @@ function App() {
   const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setResult(null);
-      setError(null);
-    }
+    const selectedFiles = Array.from(e.target.files);
+    const wavs = selectedFiles.filter(f => f.name.endsWith('.wav'));
+    const xmls = selectedFiles.filter(f => f.name.endsWith('.xml') && !['Holders.xml', 'CallRefs.xml'].includes(f.name));
+    const holders = selectedFiles.find(f => f.name === 'Holders.xml');
+    const callrefs = selectedFiles.find(f => f.name === 'CallRefs.xml');
+    
+    setFiles({ wavs, xmls, holders, callrefs });
+    setResult(null);
+    setError(null);
+  };
+
+  const uploadFile = async (file, prefix) => {
+    const res = await fetch(`${API_URL}/upload-url?filename=${prefix}/${encodeURIComponent(file.name)}`);
+    const { upload_url, key } = await res.json();
+    await fetch(upload_url, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type || 'application/octet-stream' }
+    });
+    return key;
   };
 
   const handleAnalyze = async () => {
-    if (!file) return;
+    if (files.wavs.length === 0) return;
     
     setLoading(true);
     setError(null);
     setResult(null);
     
     try {
-      // 1. Obtener URL presignada
-      setStatus('Obteniendo URL de carga...');
-      const uploadRes = await fetch(`${API_URL}/upload-url?filename=${encodeURIComponent(file.name)}`);
-      if (!uploadRes.ok) throw new Error('Error obteniendo URL de carga');
-      const { upload_url, key } = await uploadRes.json();
+      const sessionId = Date.now();
       
-      // 2. Subir archivo a S3
-      setStatus('Subiendo audio a S3...');
-      const uploadToS3 = await fetch(upload_url, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': 'audio/mpeg' }
-      });
-      if (!uploadToS3.ok) throw new Error('Error subiendo archivo');
+      // 1. Subir WAVs
+      setStatus(`Subiendo ${files.wavs.length} archivos de audio...`);
+      const audioKeys = await Promise.all(
+        files.wavs.map(f => uploadFile(f, `sessions/${sessionId}/audios`))
+      );
       
-      // 3. Analizar
-      setStatus('Transcribiendo audio (esto puede tomar 1-2 minutos)...');
-      const analyzeRes = await fetch(`${API_URL}/analyze`, {
+      // 2. Subir XMLs
+      const xmlKeys = { recordings: [] };
+      
+      if (files.holders) {
+        setStatus('Subiendo metadatos (Holders.xml)...');
+        xmlKeys.holders = await uploadFile(files.holders, `sessions/${sessionId}`);
+      }
+      
+      if (files.callrefs) {
+        setStatus('Subiendo metadatos (CallRefs.xml)...');
+        xmlKeys.callrefs = await uploadFile(files.callrefs, `sessions/${sessionId}`);
+      }
+      
+      if (files.xmls.length > 0) {
+        setStatus(`Subiendo ${files.xmls.length} archivos de recordings...`);
+        xmlKeys.recordings = await Promise.all(
+          files.xmls.map(f => uploadFile(f, `sessions/${sessionId}/recordings`))
+        );
+      }
+      
+      // 3. Analizar sesión
+      setStatus('Analizando sesión completa (esto puede tomar varios minutos)...');
+      const analyzeRes = await fetch(`${API_URL}/analyze-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audio_key: key })
+        body: JSON.stringify({ audio_keys: audioKeys, xml_keys: xmlKeys })
       });
       
       const data = await analyzeRes.json();
@@ -62,6 +89,8 @@ function App() {
       
       setResult({
         transcript: data.transcript,
+        sessionInfo: data.session_info,
+        interventions: data.interventions,
         ...data.evaluation
       });
       setStatus('');
@@ -83,18 +112,21 @@ function App() {
   const downloadResult = (format) => {
     if (!result) return;
     const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-    const filename = `emova_analisis_${timestamp}`;
+    const filename = `emova_sesion_${timestamp}`;
     
     let content, type, ext;
     if (format === 'json') {
-      content = JSON.stringify({ archivo: file?.name, fecha: new Date().toISOString(), ...result }, null, 2);
+      content = JSON.stringify({ fecha: new Date().toISOString(), ...result }, null, 2);
       type = 'application/json';
       ext = 'json';
     } else {
-      content = `ANÁLISIS DE COMUNICACIÓN - EMOVA
+      content = `ANÁLISIS DE SESIÓN - EMOVA
 ================================
-Archivo: ${file?.name}
 Fecha: ${new Date().toLocaleString()}
+Duración total: ${result.sessionInfo?.total_duration || 0} segundos
+Archivos analizados: ${result.sessionInfo?.num_audios || 0}
+Intervenciones: ${result.sessionInfo?.num_interventions || 0}
+Participantes: ${result.sessionInfo?.participants?.join(', ') || 'N/A'}
 
 PUNTUACIÓN GENERAL: ${result.score}/10
 
@@ -115,6 +147,10 @@ ${result.errores_detectados?.map(e => `- ${e}`).join('\n') || 'Ninguno'}
 
 RECOMENDACIONES:
 ${result.recommendations?.map(r => `- ${r}`).join('\n') || 'Ninguna'}
+
+ANÁLISIS POR OPERADOR:
+${result.analisis_por_operador ? Object.entries(result.analisis_por_operador).map(([op, data]) => 
+  `- ${op}: ${data.score}/10 - ${data.observacion}`).join('\n') : 'N/A'}
 `;
       type = 'text/plain';
       ext = 'txt';
@@ -129,6 +165,8 @@ ${result.recommendations?.map(r => `- ${r}`).join('\n') || 'Ninguna'}
     URL.revokeObjectURL(url);
   };
 
+  const totalFiles = files.wavs.length + files.xmls.length + (files.holders ? 1 : 0) + (files.callrefs ? 1 : 0);
+
   return (
     <div className="app">
       <header className="header">
@@ -137,32 +175,44 @@ ${result.recommendations?.map(r => `- ${r}`).join('\n') || 'Ninguna'}
           <img src={LOGO_GOBIERNO} alt="Gobierno Argentina" className="logo-gobierno" />
         </div>
         <h1>Analítica de Conversaciones</h1>
-        <p className="subtitle">Evaluación de calidad en comunicaciones operativas</p>
+        <p className="subtitle">Evaluación de calidad en comunicaciones operativas - Sistema TETRA</p>
       </header>
 
       <main className="main">
         <section className="upload-section">
           <div 
-            className={`upload-box ${file ? 'has-file' : ''}`} 
+            className={`upload-box ${totalFiles > 0 ? 'has-file' : ''}`} 
             onClick={() => fileInputRef.current?.click()}
           >
             <input
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept="audio/*"
+              accept=".wav,.xml"
+              multiple
             />
-            <div className="upload-icon">{file ? '✓' : '🎙️'}</div>
-            <p>{file ? file.name : 'Haz clic o arrastra un archivo de audio'}</p>
-            <span className="upload-hint">{file ? 'Clic para cambiar archivo' : 'Formatos: MP3, WAV, M4A, OGG'}</span>
+            <div className="upload-icon">{totalFiles > 0 ? '✓' : '📁'}</div>
+            {totalFiles > 0 ? (
+              <div className="file-summary">
+                <p>{files.wavs.length} archivos WAV</p>
+                <p>{files.xmls.length} archivos XML (recordings)</p>
+                {files.holders && <p>Holders.xml</p>}
+                {files.callrefs && <p>CallRefs.xml</p>}
+              </div>
+            ) : (
+              <>
+                <p>Selecciona los archivos de la sesión</p>
+                <span className="upload-hint">WAV (audios) + XML (Holders, CallRefs, recordings)</span>
+              </>
+            )}
           </div>
           
           <button 
             className="analyze-btn" 
             onClick={handleAnalyze}
-            disabled={!file || loading}
+            disabled={files.wavs.length === 0 || loading}
           >
-            {loading ? 'Procesando...' : 'Analizar Comunicación'}
+            {loading ? 'Procesando...' : `Analizar Sesión (${files.wavs.length} audios)`}
           </button>
           
           {status && <p className="status">{status}</p>}
@@ -171,6 +221,29 @@ ${result.recommendations?.map(r => `- ${r}`).join('\n') || 'Ninguna'}
 
         {result && (
           <section className="results-section">
+            {/* Info de sesión */}
+            <div className="session-info-card">
+              <h3>Información de la Sesión</h3>
+              <div className="session-stats">
+                <div className="stat">
+                  <span className="stat-value">{result.sessionInfo?.total_duration || 0}s</span>
+                  <span className="stat-label">Duración</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{result.sessionInfo?.num_audios || 0}</span>
+                  <span className="stat-label">Audios</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{result.sessionInfo?.num_interventions || 0}</span>
+                  <span className="stat-label">Intervenciones</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{result.sessionInfo?.participants?.length || 0}</span>
+                  <span className="stat-label">Participantes</span>
+                </div>
+              </div>
+            </div>
+
             {/* Score Principal */}
             <div className="score-main-card">
               <div className="download-buttons">
@@ -181,7 +254,7 @@ ${result.recommendations?.map(r => `- ${r}`).join('\n') || 'Ninguna'}
                   Descargar TXT
                 </button>
               </div>
-              <div className="score-circle" style={{ '--score-color': getScoreColor(result.score), '--score-percent': `${result.score * 10}%` }}>
+              <div className="score-circle" style={{ '--score-color': getScoreColor(result.score) }}>
                 <svg viewBox="0 0 100 100">
                   <circle className="score-bg" cx="50" cy="50" r="45" />
                   <circle className="score-progress" cx="50" cy="50" r="45" 
@@ -195,7 +268,7 @@ ${result.recommendations?.map(r => `- ${r}`).join('\n') || 'Ninguna'}
               <h2 className="score-title">Puntuación General</h2>
             </div>
 
-            {/* Criterios con barras */}
+            {/* Criterios */}
             <div className="criteria-card">
               <h3>Criterios de Evaluación</h3>
               <div className="criteria-grid">
@@ -218,11 +291,51 @@ ${result.recommendations?.map(r => `- ${r}`).join('\n') || 'Ninguna'}
               </div>
             </div>
 
+            {/* Timeline de intervenciones */}
+            {result.interventions?.length > 0 && (
+              <div className="card timeline-card">
+                <h3>Timeline de Intervenciones</h3>
+                <div className="timeline">
+                  {result.interventions.slice(0, 15).map((inv, i) => (
+                    <div className="timeline-item" key={i}>
+                      <span className="timeline-time">{inv.start?.split(' ')[1] || ''}</span>
+                      <span className="timeline-speaker">Operador {inv.talking_id}</span>
+                      <span className="timeline-duration">{inv.duration}s</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Análisis por operador */}
+            {result.analisis_por_operador && (
+              <div className="card operators-card">
+                <h3>Análisis por Operador</h3>
+                <div className="operators-grid">
+                  {Object.entries(result.analisis_por_operador).map(([op, data], i) => (
+                    <div className="operator-item" key={i}>
+                      <div className="operator-header">
+                        <span className="operator-name">{op}</span>
+                        <span className="operator-score" style={{ color: getScoreColor(data.score) }}>
+                          {data.score}/10
+                        </span>
+                      </div>
+                      <p className="operator-obs">{data.observacion}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Transcripción */}
             {result.transcript && (
               <div className="card transcript-card">
                 <h3>Transcripción</h3>
-                <p>{result.transcript}</p>
+                <div className="transcript-content">
+                  {result.transcript.split('\n').map((line, i) => (
+                    <p key={i} className="transcript-line">{line}</p>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -232,7 +345,7 @@ ${result.recommendations?.map(r => `- ${r}`).join('\n') || 'Ninguna'}
               <p>{result.justification}</p>
             </div>
 
-            {/* Errores y Recomendaciones lado a lado */}
+            {/* Errores y Recomendaciones */}
             <div className="feedback-grid">
               {result.errores_detectados?.length > 0 && (
                 <div className="card errors-card">

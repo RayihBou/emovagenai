@@ -33,7 +33,41 @@ Resources:
       Tags:
         Project: EMOVA
 
-  # Lambda: Analizar audio (transcribe + bedrock)
+  # Lambda: Analizar sesión completa (múltiples WAV + XML)
+  AnalyzeSessionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub emova-analyze-session-${Environment}
+      Handler: analyze_session_handler.handler
+      CodeUri: src/
+      Timeout: 900
+      MemorySize: 1024
+      Environment:
+        Variables:
+          AUDIO_BUCKET: !Ref AudioBucketName
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref AudioBucketName
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - transcribe:StartTranscriptionJob
+                - transcribe:GetTranscriptionJob
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+      Events:
+        AnalyzeSessionApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref EmovaApi
+            Path: /analyze-session
+            Method: post
+
+  # Lambda: Analizar audio individual (mantener compatibilidad)
   AnalyzeFunction:
     Type: AWS::Serverless::Function
     Properties:

@@ -406,6 +406,142 @@ section h2 {
   margin-bottom: 0;
 }
 
+/* Session Info Card */
+.session-info-card {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.session-info-card h3 {
+  font-size: 1rem;
+  color: #e2e8f0;
+  margin-bottom: 1rem;
+}
+
+.session-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.stat {
+  text-align: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #00d4ff;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+/* Timeline Card */
+.timeline-card .timeline {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.timeline-time {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-family: monospace;
+  min-width: 80px;
+}
+
+.timeline-speaker {
+  flex: 1;
+  font-size: 0.85rem;
+  color: #e2e8f0;
+}
+
+.timeline-duration {
+  font-size: 0.75rem;
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.2);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* Operators Card */
+.operators-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.operator-item {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.operator-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.operator-name {
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.operator-score {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.operator-obs {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* File Summary */
+.file-summary {
+  text-align: center;
+}
+
+.file-summary p {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0.25rem 0;
+}
+
+/* Transcript Content */
+.transcript-content {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.transcript-line {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0.5rem 0;
+  padding-left: 1rem;
+  border-left: 2px solid rgba(124, 58, 237, 0.3);
+}
+
 .footer {
   text-align: center;
   margin-top: 3rem;
