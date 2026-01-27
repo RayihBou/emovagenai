@@ -226,8 +226,8 @@ function App() {
     .transcript-line { margin-bottom: 8px; line-height: 1.5; }
     ul { padding-left: 20px; }
     li { margin-bottom: 8px; line-height: 1.5; }
-    h2 { color: #ff9900; margin-bottom: 16px; }
-    h3 { color: #e2e8f0; margin-bottom: 16px; }
+    h2 { color: #e2e8f0; margin-bottom: 16px; font-size: 1.1rem; font-weight: 600; }
+    h3 { color: #e2e8f0; margin-bottom: 16px; font-size: 0.95rem; }
   </style>
 </head>
 <body>
