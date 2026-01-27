@@ -177,6 +177,205 @@ function App() {
       content = JSON.stringify({ fecha: new Date().toISOString(), ...result }, null, 2);
       type = 'application/json';
       ext = 'json';
+    } else if (format === 'html') {
+      content = `<!DOCTYPE html>
+<html style="background: #1a1a2e; margin: 0; padding: 0;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emova - Análisis de Comunicaciones TETRA</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: #1a1a2e; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .header { text-align: center; margin-bottom: 40px; }
+    .header h1 { color: #ff9900; font-size: 2.5rem; margin-bottom: 10px; }
+    .header p { color: #94a3b8; font-size: 1.1rem; }
+    .card { background: #16213e; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #334155; }
+    .score-main { text-align: center; margin-bottom: 40px; }
+    .score-circle { width: 200px; height: 200px; margin: 0 auto 20px; position: relative; }
+    .score-circle svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .score-bg { fill: none; stroke: #334155; stroke-width: 8; }
+    .score-progress { fill: none; stroke: ${getScoreColor(result.score)}; stroke-width: 8; stroke-linecap: round; }
+    .score-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    .score-value { font-size: 3rem; font-weight: bold; color: ${getScoreColor(result.score)}; }
+    .score-max { font-size: 1.5rem; color: #94a3b8; }
+    .criteria-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+    .criteria-item { background: #0f172a; padding: 16px; border-radius: 8px; }
+    .criteria-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .criteria-name { font-weight: 600; }
+    .criteria-value { font-weight: bold; font-size: 1.2rem; }
+    .criteria-bar { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
+    .criteria-fill { height: 100%; transition: width 0.3s ease; }
+    .session-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
+    .stat { text-align: center; }
+    .stat-value { display: block; font-size: 2rem; font-weight: bold; color: #ff9900; }
+    .stat-label { color: #94a3b8; font-size: 0.9rem; }
+    .operators-grid { display: grid; gap: 16px; }
+    .operator-item { background: #0f172a; padding: 16px; border-radius: 8px; }
+    .operator-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .operator-name { font-weight: 600; }
+    .operator-score { font-weight: bold; font-size: 1.1rem; }
+    .operator-obs { color: #94a3b8; font-size: 0.9rem; }
+    .timeline { max-height: 400px; overflow-y: auto; }
+    .timeline-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #334155; }
+    .timeline-time { color: #94a3b8; font-size: 0.9rem; }
+    .timeline-speaker { font-weight: 500; }
+    .timeline-duration { color: #ff9900; font-size: 0.9rem; }
+    .transcript-content { max-height: 400px; overflow-y: auto; background: #0f172a; padding: 16px; border-radius: 8px; }
+    .transcript-line { margin-bottom: 8px; line-height: 1.5; }
+    ul { padding-left: 20px; }
+    li { margin-bottom: 8px; line-height: 1.5; }
+    h2 { color: #ff9900; margin-bottom: 16px; }
+    h3 { color: #e2e8f0; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Emova - Análisis de Comunicaciones TETRA</h1>
+      <p>Reporte generado el ${new Date().toLocaleString()}</p>
+    </div>
+    
+    <div class="card">
+      <h2>Información de la Sesión</h2>
+      <div class="session-stats">
+        <div class="stat">
+          <span class="stat-value">${result.sessionInfo?.total_duration || 0}s</span>
+          <span class="stat-label">Duración</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">${result.sessionInfo?.num_audios || 0}</span>
+          <span class="stat-label">Audios</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">${result.sessionInfo?.num_interventions || 0}</span>
+          <span class="stat-label">Intervenciones</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">${result.sessionInfo?.participants?.length || 0}</span>
+          <span class="stat-label">Participantes</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card score-main">
+      <h2>Puntuación General</h2>
+      <div class="score-circle">
+        <svg viewBox="0 0 100 100">
+          <circle class="score-bg" cx="50" cy="50" r="45" />
+          <circle class="score-progress" cx="50" cy="50" r="45" 
+            style="stroke-dasharray: ${result.score * 28.27} 282.7" />
+        </svg>
+        <div class="score-text">
+          <span class="score-value">${result.score?.toFixed(1)}</span>
+          <span class="score-max">/10</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Criterios de Evaluación</h2>
+      <div class="criteria-grid">
+        <div class="criteria-item">
+          <div class="criteria-header">
+            <span class="criteria-name">Fraseología</span>
+            <span class="criteria-value" style="color: ${getScoreColor(result.fraseologia)}">${result.fraseologia}</span>
+          </div>
+          <div class="criteria-bar">
+            <div class="criteria-fill" style="width: ${result.fraseologia * 10}%; background: ${getScoreColor(result.fraseologia)}"></div>
+          </div>
+        </div>
+        <div class="criteria-item">
+          <div class="criteria-header">
+            <span class="criteria-name">Claridad</span>
+            <span class="criteria-value" style="color: ${getScoreColor(result.claridad)}">${result.claridad}</span>
+          </div>
+          <div class="criteria-bar">
+            <div class="criteria-fill" style="width: ${result.claridad * 10}%; background: ${getScoreColor(result.claridad)}"></div>
+          </div>
+        </div>
+        <div class="criteria-item">
+          <div class="criteria-header">
+            <span class="criteria-name">Protocolo</span>
+            <span class="criteria-value" style="color: ${getScoreColor(result.protocolo)}">${result.protocolo}</span>
+          </div>
+          <div class="criteria-bar">
+            <div class="criteria-fill" style="width: ${result.protocolo * 10}%; background: ${getScoreColor(result.protocolo)}"></div>
+          </div>
+        </div>
+        <div class="criteria-item">
+          <div class="criteria-header">
+            <span class="criteria-name">Formalidad</span>
+            <span class="criteria-value" style="color: ${getScoreColor(result.formalidad)}">${result.formalidad}</span>
+          </div>
+          <div class="criteria-bar">
+            <div class="criteria-fill" style="width: ${result.formalidad * 10}%; background: ${getScoreColor(result.formalidad)}"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    ${result.analisis_por_operador ? `<div class="card">
+      <h2>Análisis por Operador</h2>
+      <div class="operators-grid">
+        ${Object.entries(result.analisis_por_operador).map(([op, data]) => {
+          const score = typeof data === 'number' ? data : (data.score || data.puntuacion || 'N/A');
+          const obs = typeof data === 'object' ? (data.observacion || data.comentario || '') : '';
+          return `<div class="operator-item">
+            <div class="operator-header">
+              <span class="operator-name">${op}</span>
+              <span class="operator-score" style="color: ${typeof score === 'number' ? getScoreColor(score) : '#94a3b8'}">${score}${typeof score === 'number' ? '/10' : ''}</span>
+            </div>
+            <p class="operator-obs">${obs}</p>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
+
+    ${result.interventions?.length > 0 ? `<div class="card">
+      <h2>Timeline de Intervenciones</h2>
+      <div class="timeline">
+        ${result.interventions.slice(0, 15).map(inv => 
+          `<div class="timeline-item">
+            <span class="timeline-time">${inv.start?.split(' ')[1] || ''}</span>
+            <span class="timeline-speaker">Operador ${inv.talking_id}</span>
+            <span class="timeline-duration">${inv.duration}s</span>
+          </div>`
+        ).join('')}
+      </div>
+    </div>` : ''}
+
+    ${result.transcript ? `<div class="card">
+      <h2>Transcripción</h2>
+      <div class="transcript-content">
+        ${result.transcript.split('\n').map(line => `<p class="transcript-line">${line}</p>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <div class="card">
+      <h2>Justificación</h2>
+      <p>${result.justification}</p>
+    </div>
+
+    ${result.errores_detectados?.length > 0 ? `<div class="card">
+      <h2>Errores Detectados</h2>
+      <ul>
+        ${result.errores_detectados.map(err => `<li>${err}</li>`).join('')}
+      </ul>
+    </div>` : ''}
+
+    ${result.recommendations?.length > 0 ? `<div class="card">
+      <h2>Recomendaciones</h2>
+      <ul>
+        ${result.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+      </ul>
+    </div>` : ''}
+  </div>
+</body>
+</html>`;
+      type = 'text/html';
+      ext = 'html';
     } else {
       content = `ANÁLISIS DE SESIÓN - EMOVA
 ================================
@@ -207,8 +406,11 @@ RECOMENDACIONES:
 ${result.recommendations?.map(r => `- ${r}`).join('\n') || 'Ninguna'}
 
 ANÁLISIS POR OPERADOR:
-${result.analisis_por_operador ? Object.entries(result.analisis_por_operador).map(([op, data]) => 
-  `- ${op}: ${data.score}/10 - ${data.observacion}`).join('\n') : 'N/A'}
+${result.analisis_por_operador ? Object.entries(result.analisis_por_operador).map(([op, data]) => {
+  const score = typeof data === 'number' ? data : (data.score || data.puntuacion || 'N/A');
+  const obs = typeof data === 'object' ? (data.observacion || data.comentario || '') : '';
+  return `- ${op}: ${score}${typeof score === 'number' ? '/10' : ''} - ${obs}`;
+}).join('\n') : 'N/A'}
 `;
       type = 'text/plain';
       ext = 'txt';
@@ -218,7 +420,7 @@ ${result.analisis_por_operador ? Object.entries(result.analisis_por_operador).ma
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${filename}.${ext}`;
+    a.download = format === 'html' ? `reporte-emova-${timestamp}.${ext}` : `${filename}.${ext}`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -358,6 +560,9 @@ ${result.analisis_por_operador ? Object.entries(result.analisis_por_operador).ma
                 <button className="download-btn" onClick={() => downloadResult('txt')}>
                   Descargar TXT
                 </button>
+                <button className="download-btn" onClick={() => downloadResult('html')}>
+                  Descargar Reporte HTML
+                </button>
               </div>
               <div className="score-circle" style={{ '--score-color': getScoreColor(result.score) }}>
                 <svg viewBox="0 0 100 100">
@@ -417,17 +622,21 @@ ${result.analisis_por_operador ? Object.entries(result.analisis_por_operador).ma
               <div className="card operators-card">
                 <h3>Análisis por Operador</h3>
                 <div className="operators-grid">
-                  {Object.entries(result.analisis_por_operador).map(([op, data], i) => (
-                    <div className="operator-item" key={i}>
-                      <div className="operator-header">
-                        <span className="operator-name">{op}</span>
-                        <span className="operator-score" style={{ color: getScoreColor(data.score) }}>
-                          {data.score}/10
-                        </span>
+                  {Object.entries(result.analisis_por_operador).map(([op, data], i) => {
+                    const score = typeof data === 'number' ? data : (data.score || data.puntuacion || 'N/A');
+                    const obs = typeof data === 'object' ? (data.observacion || data.comentario || '') : '';
+                    return (
+                      <div className="operator-item" key={i}>
+                        <div className="operator-header">
+                          <span className="operator-name">{op}</span>
+                          <span className="operator-score" style={{ color: typeof score === 'number' ? getScoreColor(score) : '#94a3b8' }}>
+                            {score}{typeof score === 'number' ? '/10' : ''}
+                          </span>
+                        </div>
+                        <p className="operator-obs">{obs}</p>
                       </div>
-                      <p className="operator-obs">{data.observacion}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
