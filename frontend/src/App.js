@@ -13,17 +13,29 @@ function App() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
+  const folderInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    const wavs = selectedFiles.filter(f => f.name.endsWith('.wav'));
-    const xmls = selectedFiles.filter(f => f.name.endsWith('.xml') && !['Holders.xml', 'CallRefs.xml'].includes(f.name));
-    const holders = selectedFiles.find(f => f.name === 'Holders.xml');
-    const callrefs = selectedFiles.find(f => f.name === 'CallRefs.xml');
+  const processFiles = (fileList) => {
+    const allFiles = Array.from(fileList);
+    const wavs = allFiles.filter(f => f.name.toLowerCase().endsWith('.wav'));
+    const xmls = allFiles.filter(f => 
+      f.name.toLowerCase().endsWith('.xml') && 
+      !['holders.xml', 'callrefs.xml'].includes(f.name.toLowerCase())
+    );
+    const holders = allFiles.find(f => f.name.toLowerCase() === 'holders.xml');
+    const callrefs = allFiles.find(f => f.name.toLowerCase() === 'callrefs.xml');
     
     setFiles({ wavs, xmls, holders, callrefs });
     setResult(null);
     setError(null);
+  };
+
+  const handleFileChange = (e) => {
+    processFiles(e.target.files);
+  };
+
+  const handleFolderChange = (e) => {
+    processFiles(e.target.files);
   };
 
   const uploadFile = async (file, prefix) => {
@@ -180,32 +192,69 @@ ${result.analisis_por_operador ? Object.entries(result.analisis_por_operador).ma
 
       <main className="main">
         <section className="upload-section">
-          <div 
-            className={`upload-box ${totalFiles > 0 ? 'has-file' : ''}`} 
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept=".wav,.xml"
-              multiple
-            />
-            <div className="upload-icon">{totalFiles > 0 ? '✓' : '📁'}</div>
-            {totalFiles > 0 ? (
-              <div className="file-summary">
-                <p>{files.wavs.length} archivos WAV</p>
-                <p>{files.xmls.length} archivos XML (recordings)</p>
-                {files.holders && <p>Holders.xml</p>}
-                {files.callrefs && <p>CallRefs.xml</p>}
-              </div>
-            ) : (
-              <>
-                <p>Selecciona los archivos de la sesión</p>
-                <span className="upload-hint">WAV (audios) + XML (Holders, CallRefs, recordings)</span>
-              </>
-            )}
+          <div className="upload-options">
+            <div 
+              className={`upload-box ${totalFiles > 0 ? 'has-file' : ''}`} 
+              onClick={() => folderInputRef.current?.click()}
+            >
+              <input
+                type="file"
+                ref={folderInputRef}
+                onChange={handleFolderChange}
+                webkitdirectory=""
+                directory=""
+                multiple
+                style={{ display: 'none' }}
+              />
+              <div className="upload-icon">{totalFiles > 0 ? '✓' : '📁'}</div>
+              {totalFiles > 0 ? (
+                <div className="file-summary">
+                  <p><strong>{files.wavs.length}</strong> archivos WAV</p>
+                  <p><strong>{files.xmls.length}</strong> archivos XML (recordings)</p>
+                  {files.holders && <p>✓ Holders.xml</p>}
+                  {files.callrefs && <p>✓ CallRefs.xml</p>}
+                </div>
+              ) : (
+                <>
+                  <p>Seleccionar carpeta de sesión</p>
+                  <span className="upload-hint">Detecta automáticamente WAV, XML, subcarpetas</span>
+                </>
+              )}
+            </div>
+            
+            <div className="upload-divider">o</div>
+            
+            <div 
+              className="upload-box upload-box-secondary"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".wav,.xml"
+                multiple
+                style={{ display: 'none' }}
+              />
+              <div className="upload-icon">📄</div>
+              <p>Seleccionar archivos</p>
+              <span className="upload-hint">WAV + XML individuales</span>
+            </div>
           </div>
+
+          {totalFiles > 0 && (
+            <div className="files-detail">
+              <details>
+                <summary>Ver archivos detectados ({totalFiles})</summary>
+                <div className="files-list">
+                  {files.wavs.map((f, i) => <span key={`wav-${i}`} className="file-tag wav">{f.name}</span>)}
+                  {files.holders && <span className="file-tag xml">Holders.xml</span>}
+                  {files.callrefs && <span className="file-tag xml">CallRefs.xml</span>}
+                  {files.xmls.map((f, i) => <span key={`xml-${i}`} className="file-tag xml">{f.name}</span>)}
+                </div>
+              </details>
+            </div>
+          )}
           
           <button 
             className="analyze-btn" 
