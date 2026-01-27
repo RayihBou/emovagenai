@@ -43,8 +43,7 @@ function App() {
     const { upload_url, key } = await res.json();
     await fetch(upload_url, {
       method: 'PUT',
-      body: file,
-      headers: { 'Content-Type': file.type || 'application/octet-stream' }
+      body: file
     });
     return key;
   };
