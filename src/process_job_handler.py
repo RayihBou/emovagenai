@@ -33,8 +33,22 @@ Evalúa según estos criterios (25% cada uno):
 3. PROTOCOLO (0-10): Identificación emisor/receptor, estructura correcta
 4. FORMALIDAD (0-10): Lenguaje profesional
 
-Responde ÚNICAMENTE con JSON válido:
-{{"score": <promedio>, "fraseologia": <0-10>, "claridad": <0-10>, "protocolo": <0-10>, "formalidad": <0-10>, "justification": "<explicación>", "errores_detectados": [], "recommendations": [], "analisis_por_operador": {{}}}}"""
+Responde ÚNICAMENTE con JSON válido (sin texto adicional):
+{{
+  "score": <promedio numérico 0-10>,
+  "fraseologia": <número 0-10>,
+  "claridad": <número 0-10>,
+  "protocolo": <número 0-10>,
+  "formalidad": <número 0-10>,
+  "justification": "<explicación breve>",
+  "errores_detectados": ["<error1>", "<error2>"],
+  "recommendations": ["<mejora1>", "<mejora2>"],
+  "analisis_por_operador": {{
+    "<nombre_operador>": {{"score": <número 0-10>, "observacion": "<comentario breve>"}}
+  }}
+}}
+
+IMPORTANTE: En analisis_por_operador, incluye TODOS los participantes con su score numérico y observación."""""
 
 def update_job(job_id, updates):
     """Actualiza estado del job en S3"""
