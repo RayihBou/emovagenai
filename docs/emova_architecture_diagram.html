@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EMOVA - Arquitectura de Solución</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { 
+      background: #0f172a; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+    .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+    
+    .header { text-align: center; margin-bottom: 50px; }
+    .header h1 { 
+      font-size: 2.2rem; 
+      background: linear-gradient(90deg, #00d4ff, #7c3aed); 
+      -webkit-background-clip: text; 
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+    .header p { color: #94a3b8; font-size: 1.1rem; }
+    
+    .diagram-container {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 40px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: center;
+    }
+    
+    .architecture {
+      display: grid;
+      grid-template-columns: repeat(6, 150px);
+      gap: 24px;
+      justify-content: center;
+    }
+    
+    .column { display: flex; flex-direction: column; gap: 16px; }
+    .column-title {
+      font-size: 0.7rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-align: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #334155;
+    }
+    
+    .component {
+      background: #334155;
+      border: 2px solid #475569;
+      border-radius: 10px;
+      padding: 14px 10px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .component:hover { border-color: #7c3aed; transform: translateY(-2px); }
+    
+    .component-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      color: white;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .icon-user { background: #64748b; }
+    .icon-amplify { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%); }
+    .icon-api { background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%); }
+    .icon-lambda { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+    .icon-s3 { background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); }
+    .icon-transcribe { background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%); }
+    .icon-bedrock { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); }
+    
+    .component-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 2px; }
+    .component-detail { font-size: 0.7rem; color: #94a3b8; }
+    
+    .flow-section {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 30px;
+    }
+    .flow-title {
+      font-size: 1.1rem;
+      color: #e2e8f0;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #7c3aed;
+    }
+    
+    .flow-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      background: #334155;
+      border-radius: 8px;
+      border-left: 3px solid #7c3aed;
+    }
+    .flow-step.upload { border-left-color: #22c55e; }
+    .flow-step.polling { border-left-color: #3b82f6; }
+    .flow-step.ai { border-left-color: #f59e0b; }
+    
+    .step-number {
+      background: #7c3aed;
+      color: white;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .flow-step.upload .step-number { background: #22c55e; }
+    .flow-step.polling .step-number { background: #3b82f6; }
+    .flow-step.ai .step-number { background: #f59e0b; }
+    
+    .step-content { flex: 1; }
+    .step-action { font-weight: 500; font-size: 0.85rem; margin-bottom: 3px; }
+    .step-detail { font-size: 0.75rem; color: #94a3b8; }
+    .step-endpoint { 
+      font-family: monospace; 
+      background: #1e293b; 
+      padding: 2px 6px; 
+      border-radius: 4px; 
+      font-size: 0.7rem;
+      color: #00d4ff;
+    }
+    
+    .legend {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid #334155;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .legend-dot.normal { background: #7c3aed; }
+    .legend-dot.upload { background: #22c55e; }
+    .legend-dot.polling { background: #3b82f6; }
+    .legend-dot.ai { background: #f59e0b; }
+    
+    .footer {
+      text-align: center;
+      color: #64748b;
+      font-size: 0.8rem;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #334155;
+    }
+    .footer img { height: 20px; margin-bottom: 8px; }
+    
+    /* SVG Icons */
+    .svg-icon { width: 24px; height: 24px; fill: currentColor; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>EMOVA - Arquitectura de Análisis de Comunicaciones TETRA</h1>
+      <p>Evaluación de calidad en comunicaciones operativas del Metro de Buenos Aires</p>
+    </div>
+    
+    <div class="diagram-container">
+      <div class="architecture">
+        <!-- Columna 1: Usuario -->
+        <div class="column">
+          <div class="column-title">Usuario</div>
+          <div class="component">
+            <div class="component-icon icon-user">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            </div>
+            <div class="component-name">Operador TETRA</div>
+            <div class="component-detail">Sistema de radio</div>
+          </div>
+        </div>
+        
+        <!-- Columna 2: Frontend -->
+        <div class="column">
+          <div class="column-title">Frontend</div>
+          <div class="component">
+            <div class="component-icon icon-amplify">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <div class="component-name">React App</div>
+            <div class="component-detail">AWS Amplify</div>
+          </div>
+        </div>
+        
+        <!-- Columna 3: API -->
+        <div class="column">
+          <div class="column-title">API</div>
+          <div class="component">
+            <div class="component-icon icon-api">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 9h-2v2H9v-2H7v-2h2V7h2v2h2v2zm3-4V3.5L18.5 9H16z"/></svg>
+            </div>
+            <div class="component-name">API Gateway</div>
+            <div class="component-detail">REST API</div>
+          </div>
+        </div>
+        
+        <!-- Columna 4: Compute -->
+        <div class="column">
+          <div class="column-title">Compute</div>
+          <div class="component">
+            <div class="component-icon icon-lambda">λ</div>
+            <div class="component-name">Upload URL</div>
+            <div class="component-detail">Presigned URLs</div>
+          </div>
+          <div class="component">
+            <div class="component-icon icon-lambda">λ</div>
+            <div class="component-name">Start Job</div>
+            <div class="component-detail">Inicia proceso</div>
+          </div>
+          <div class="component">
+            <div class="component-icon icon-lambda">λ</div>
+            <div class="component-name">Process Job</div>
+            <div class="component-detail">Transcribe + Bedrock</div>
+          </div>
+          <div class="component">
+            <div class="component-icon icon-lambda">λ</div>
+            <div class="component-name">Job Status</div>
+            <div class="component-detail">Consulta estado</div>
+          </div>
+        </div>
+        
+        <!-- Columna 5: Storage -->
+        <div class="column">
+          <div class="column-title">Storage</div>
+          <div class="component">
+            <div class="component-icon icon-s3">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
+            </div>
+            <div class="component-name">S3 Bucket</div>
+            <div class="component-detail">sessions / jobs</div>
+          </div>
+        </div>
+        
+        <!-- Columna 6: AI/ML -->
+        <div class="column">
+          <div class="column-title">AI / ML</div>
+          <div class="component">
+            <div class="component-icon icon-transcribe">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
+            </div>
+            <div class="component-name">Transcribe</div>
+            <div class="component-detail">Speech-to-Text</div>
+          </div>
+          <div class="component">
+            <div class="component-icon icon-bedrock">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8z"/></svg>
+            </div>
+            <div class="component-name">Bedrock</div>
+            <div class="component-detail">Claude 3.5 Sonnet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="flow-section">
+      <div class="flow-title">Flujo del Proceso</div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <div class="step-action">Operador sube archivos</div>
+            <div class="step-detail">Carpeta TETRA con archivos WAV + XML</div>
+          </div>
+        </div>
+        
+        <div class="flow-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <div class="step-action">Solicita URLs de upload</div>
+            <div class="step-detail"><span class="step-endpoint">GET /upload-url</span></div>
+          </div>
+        </div>
+        
+        <div class="flow-step upload">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <div class="step-action">Upload directo a S3</div>
+            <div class="step-detail">Usando presigned URLs</div>
+          </div>
+        </div>
+        
+        <div class="flow-step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <div class="step-action">Inicia análisis</div>
+            <div class="step-detail"><span class="step-endpoint">POST /analyze-session</span></div>
+          </div>
+        </div>
+        
+        <div class="flow-step">
+          <div class="step-number">5</div>
+          <div class="step-content">
+            <div class="step-action">Invocación asíncrona</div>
+            <div class="step-detail">Start Job invoca Process Job</div>
+          </div>
+        </div>
+        
+        <div class="flow-step">
+          <div class="step-number">6</div>
+          <div class="step-content">
+            <div class="step-action">Lee archivos de S3</div>
+            <div class="step-detail">WAV + XML (Holders, CallRefs)</div>
+          </div>
+        </div>
+        
+        <div class="flow-step ai">
+          <div class="step-number">7</div>
+          <div class="step-content">
+            <div class="step-action">Transcripción de audio</div>
+            <div class="step-detail">Amazon Transcribe (es-ES)</div>
+          </div>
+        </div>
+        
+        <div class="flow-step ai">
+          <div class="step-number">8</div>
+          <div class="step-content">
+            <div class="step-action">Evaluación con IA</div>
+            <div class="step-detail">Fraseología, Claridad, Protocolo, Formalidad</div>
+          </div>
+        </div>
+        
+        <div class="flow-step">
+          <div class="step-number">9</div>
+          <div class="step-content">
+            <div class="step-action">Guarda resultado</div>
+            <div class="step-detail">Score y análisis en S3</div>
+          </div>
+        </div>
+        
+        <div class="flow-step polling">
+          <div class="step-number">10</div>
+          <div class="step-content">
+            <div class="step-action">Polling de estado</div>
+            <div class="step-detail"><span class="step-endpoint">GET /job/{id}</span> cada 5s</div>
+          </div>
+        </div>
+        
+        <div class="flow-step">
+          <div class="step-number">11</div>
+          <div class="step-content">
+            <div class="step-action">Muestra resultados</div>
+            <div class="step-detail">Dashboard con score y reportes</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot normal"></div> Flujo normal</div>
+        <div class="legend-item"><div class="legend-dot upload"></div> Upload S3</div>
+        <div class="legend-item"><div class="legend-dot polling"></div> Polling</div>
+        <div class="legend-item"><div class="legend-dot ai"></div> AI/ML</div>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <img src="https://a0.awsstatic.com/libra-css/images/logos/aws_smile-header-desktop-en-white_59x35.png" alt="AWS">
+      <p>Powered by AWS Amplify | Amazon API Gateway | AWS Lambda | Amazon S3 | Amazon Transcribe | Amazon Bedrock</p>
+      <p style="margin-top: 8px;">Amazon Confidential</p>
+    </div>
+  </div>
+</body>
+</html>

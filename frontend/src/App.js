@@ -692,7 +692,7 @@ ${result.analisis_por_operador ? Object.entries(result.analisis_por_operador).ma
           <span>Powered by</span>
           <img src={LOGO_AWS} alt="AWS" className="logo-aws-footer" />
         </div>
-        <p className="services">Amazon Transcribe | Amazon Bedrock | Claude 3.5 Sonnet</p>
+        <p className="services">AWS Amplify | Amazon API Gateway | AWS Lambda | Amazon S3 | Amazon Transcribe | Amazon Bedrock</p>
       </footer>
     </div>
   );
