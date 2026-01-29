@@ -179,19 +179,20 @@ function App() {
       ext = 'json';
     } else if (format === 'html') {
       content = `<!DOCTYPE html>
-<html style="background: #1a1a2e; margin: 0; padding: 0;">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Emova - Análisis de Comunicaciones TETRA</title>
+  <title>EMOVA - Reporte de Analisis</title>
+  <link rel="icon" href="https://a0.awsstatic.com/libra-css/images/site/fav/favicon.ico">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { background: #1a1a2e; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-    .header { text-align: center; margin-bottom: 40px; }
-    .header h1 { font-size: 2rem; font-weight: 700; margin-bottom: 10px; background: linear-gradient(90deg, #00d4ff, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .header p { color: #94a3b8; font-size: 1.1rem; }
-    .card { background: #16213e; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #334155; }
+    html, body { background: #0f172a; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 20px 40px; display: flex; align-items: center; gap: 20px; border-bottom: 3px solid #7c3aed; }
+    .header img { height: 35px; }
+    .header h1 { margin: 0; font-size: 1.5rem; font-weight: 500; color: #e2e8f0; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 30px 20px; }
+    .card { background: #1e293b; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #334155; }
     .score-main { text-align: center; margin-bottom: 40px; }
     .score-circle { width: 200px; height: 200px; margin: 0 auto 20px; position: relative; }
     .score-circle svg { width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -201,18 +202,18 @@ function App() {
     .score-value { font-size: 3rem; font-weight: bold; color: ${getScoreColor(result.score)}; }
     .score-max { font-size: 1.5rem; color: #94a3b8; }
     .criteria-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-    .criteria-item { background: #0f172a; padding: 16px; border-radius: 8px; }
+    .criteria-item { background: #334155; padding: 16px; border-radius: 8px; }
     .criteria-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .criteria-name { font-weight: 600; }
     .criteria-value { font-weight: bold; font-size: 1.2rem; }
-    .criteria-bar { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
+    .criteria-bar { height: 8px; background: #475569; border-radius: 4px; overflow: hidden; }
     .criteria-fill { height: 100%; transition: width 0.3s ease; }
     .session-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
     .stat { text-align: center; }
-    .stat-value { display: block; font-size: 2rem; font-weight: bold; color: #ff9900; }
+    .stat-value { display: block; font-size: 2rem; font-weight: bold; color: #7c3aed; }
     .stat-label { color: #94a3b8; font-size: 0.9rem; }
     .operators-grid { display: grid; gap: 16px; }
-    .operator-item { background: #0f172a; padding: 16px; border-radius: 8px; }
+    .operator-item { background: #334155; padding: 16px; border-radius: 8px; }
     .operator-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .operator-name { font-weight: 600; }
     .operator-score { font-weight: bold; font-size: 1.1rem; }
@@ -221,28 +222,29 @@ function App() {
     .timeline-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #334155; }
     .timeline-time { color: #94a3b8; font-size: 0.9rem; }
     .timeline-speaker { font-weight: 500; }
-    .timeline-duration { color: #ff9900; font-size: 0.9rem; }
-    .transcript-content { max-height: 400px; overflow-y: auto; background: #0f172a; padding: 16px; border-radius: 8px; }
+    .timeline-duration { color: #7c3aed; font-size: 0.9rem; }
+    .transcript-content { max-height: 400px; overflow-y: auto; background: #334155; padding: 16px; border-radius: 8px; }
     .transcript-line { margin-bottom: 8px; line-height: 1.5; }
     ul { padding-left: 20px; }
     li { margin-bottom: 8px; line-height: 1.5; }
-    h2 { color: #e2e8f0; margin-bottom: 16px; font-size: 1.1rem; font-weight: 600; }
+    h2 { color: #e2e8f0; margin-bottom: 16px; font-size: 1.1rem; font-weight: 600; padding-bottom: 10px; border-bottom: 2px solid #7c3aed; }
     h3 { color: #e2e8f0; margin-bottom: 16px; font-size: 0.95rem; }
+    .footer { text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 40px; padding-top: 20px; border-top: 1px solid #334155; }
+    .footer img { height: 20px; margin-bottom: 8px; }
   </style>
 </head>
 <body>
+  <div class="header">
+    <img src="https://a0.awsstatic.com/libra-css/images/logos/aws_smile-header-desktop-en-white_59x35.png" alt="AWS Logo">
+    <h1>EMOVA - Reporte de Analisis de Comunicaciones TETRA</h1>
+  </div>
   <div class="container">
-    <div class="header">
-      <h1>Emova - Análisis de Comunicaciones TETRA</h1>
-      <p>Reporte generado el ${new Date().toLocaleString()}</p>
-    </div>
-    
     <div class="card">
-      <h2>Información de la Sesión</h2>
+      <h2>Informacion de la Sesion</h2>
       <div class="session-stats">
         <div class="stat">
           <span class="stat-value">${result.sessionInfo?.total_duration || 0}s</span>
-          <span class="stat-label">Duración</span>
+          <span class="stat-label">Duracion</span>
         </div>
         <div class="stat">
           <span class="stat-value">${result.sessionInfo?.num_audios || 0}</span>
@@ -371,6 +373,12 @@ function App() {
         ${result.recommendations.map(rec => `<li>${rec}</li>`).join('')}
       </ul>
     </div>` : ''}
+    
+    <div class="footer">
+      <img src="https://a0.awsstatic.com/libra-css/images/logos/aws_smile-header-desktop-en-white_59x35.png" alt="AWS">
+      <p>Powered by AWS Amplify | Amazon API Gateway | AWS Lambda | Amazon S3 | Amazon Transcribe | Amazon Bedrock</p>
+      <p style="margin-top: 8px;">Amazon Confidential</p>
+    </div>
   </div>
 </body>
 </html>`;
